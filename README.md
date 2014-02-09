@@ -21,4 +21,3 @@ rbind は std::bind を参照ベースにしたものです。
 
   you can set a placeholder for the first argument
   第一引数もプレースホルダにできる
-
