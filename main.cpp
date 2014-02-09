@@ -2,6 +2,13 @@
 #include <iostream>
 #include <string>
 
+struct Func	{
+	int operator ()(int a, int& b, int c = 1) const
+		{ return a * 10000 + (b *= 100) + c; }
+	int memFun(int a, int b, int c = 1) const
+		{ return a * 10000 + b * 100 + c; }
+};
+
 int main(int argc, char **argv)
 {
 	using namespace std::placeholders;
