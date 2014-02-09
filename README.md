@@ -2,9 +2,13 @@ rbind
 =====
 
 rbind is alternative of std::bind that is reference base.
+
 It has additional function work with special placeholders for it.
+
 rbind は std::bind を参照ベースにしたものです。
+
 専用のプレースホルダと組み合わせれば追加機能も使えます。
+
 
   all arguments are reference base without std::ref.
   引数は参照ベースであり、std::refは必要はない。
