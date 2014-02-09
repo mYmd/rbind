@@ -46,9 +46,12 @@ int main(int argc, char **argv)
 	a = 2014, b = 2, c = 1;
 	std::string str("abcdefg");
 	//convert argument by yield method     yieldメソッドによる引数変換
-	auto b4 = my::rbind(f, 2014, _1,
-								_2nd.yield<int>([](const std::string& s){ return s.length(); })
-						);
+	auto b4 = my::rbind(&Func::memFun	,
+			    &f			,
+			    2014		,
+			    _1			,
+			    _2nd.yield<int>([](const std::string& s){ return s.length(); })
+			    );
 	result = b4(b, str);
 	std::cout << "---- convert augument by yield for the last argument" << std::endl;
 	std::cout << "b = " << b << ", s = " << str << ", result = " << result << std::endl;
