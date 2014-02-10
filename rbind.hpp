@@ -13,20 +13,20 @@ struct nil	{
 	typedef nil param_t;
 };
 
-//number of arguments    ˆø”‚Ì”
+//number of arguments    ï¿½ï¿½ï¿½ï¿½ï¿½Ìï¿½
 template <int N> struct p_n	{
 	static const int value = N;
 };
 
-//type of invoke    ŒÄ‚Ño‚µ‚ÌŒ^
+//type of invoke    ï¿½Ä‚Ñoï¿½ï¿½ï¿½ÌŒ^
 	//obj.*, pobj->*
 struct mem_c	{	};
 	//obj.*(), pobj->*()
 struct memF_c	{	};
-	//functor    ƒtƒ@ƒ“ƒNƒ^Œ^iƒtƒŠ[ŠÖ”Aƒ‰ƒ€ƒ_j
+	//functor    ï¿½tï¿½@ï¿½ï¿½ï¿½Nï¿½^ï¿½^ï¿½iï¿½tï¿½ï¿½ï¿½[ï¿½Öï¿½ï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½j
 struct fnc_c	{	};
 
-//pair <type of invoke, return type>    ŒÄ‚Ño‚µ‚ÌŒ^‚Æ–ß‚è’lŒ^‚ÌƒyƒA
+//pair <type of invoke, return type>    ï¿½Ä‚Ñoï¿½ï¿½ï¿½ÌŒ^ï¿½Æ–ß‚ï¿½ï¿½lï¿½^ï¿½Ìƒyï¿½A
 template <typename C, typename R>
 	struct cr_pair	{
 		typedef C call_type;
@@ -38,12 +38,12 @@ template<typename T>
 	struct remove_ref_cv	{
 		typedef typename std::remove_reference<typename std::remove_cv<T>::type>::type	type;
 	};
-// type compair without const/volatile‘®«‚ÆQÆ‘®«‚ğŠO‚µ‚ÄŒ^‚Ì“¯ˆê«‚ğ”äŠr
+// type compair without const/volatileï¿½ï¿½ï¿½ï¿½ï¿½ÆQï¿½Æ‘ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½ÄŒ^ï¿½Ì“ï¿½ï¿½ê«ï¿½ï¿½ï¿½ï¿½ï¿½r
 template<typename T, typename U>
 	struct is_same_ignoring_cv_ref :
 		std::is_same<typename remove_ref_cv<T>::type, typename remove_ref_cv<U>::type>	{	};
 
-//parameter buffer    ƒpƒ‰ƒ[ƒ^ƒoƒbƒtƒ@
+//parameter buffer    ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^ï¿½oï¿½bï¿½tï¿½@
 template <typename T>
 	struct param_buf	{
 		mutable T		val;
@@ -63,25 +63,25 @@ template <typename T>
 	};
 
 //placeholder
-	//yielded     _1st.yield<T>(functor)    ’l‚ğ•]‰¿‚·‚éplaceholder
+	//yielded     _1st.yield<T>(functor)    ï¿½lï¿½ï¿½ï¿½]ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½placeholder
 template <int N, typename R, typename F>
 	struct placeholder_with_F : param_buf<F>	{
 		placeholder_with_F(F&& f) : param_buf<F>(std::forward<F>(f))		{ }
 		template <typename V>
 			R eval(V&& v) const	{ return (param_buf<F>::get())(std::forward<V>(v)); }
 	};
-	//yielded    _2nd.yield<T>()    statc_cast‚·‚éplaceholder
+	//yielded    _2nd.yield<T>()    statc_castï¿½ï¿½ï¿½ï¿½placeholder
 template <int N, typename R>
 	struct placeholder_with_F<N, R, void>		{	};
-	//with default parameter    ƒfƒtƒHƒ‹ƒgˆø”‚ğ•t—^‚³‚ê‚½placeholder
+	//with default parameter    ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½tï¿½^ï¿½ï¿½ï¿½ê‚½placeholder
 template <int N, typename T>
 	struct placeholder_with_F<N, void, T> : param_buf<T>	{
 		placeholder_with_F(T&& t) : param_buf<T>(std::forward<T>(t)) { }
 	};
-	//basic placeholder    Šî–{‚Ìplaceholder
+	//basic placeholder    ï¿½ï¿½ï¿½{ï¿½ï¿½placeholder
 template <int N>
 	struct placeholder_with_F<N, void, void>	{
-		//assign the default parameter    ƒfƒtƒHƒ‹ƒg’l‚ğ = ‚Åİ’è‚·‚é
+		//assign the default parameter    ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½lï¿½ï¿½ = ï¿½Åİ’è‚·ï¿½ï¿½
 		template <typename V>
 			auto operator =(V&& v) const -> placeholder_with_F<N, void, V>
 			{ return placeholder_with_F<N, void, V>(std::forward<V>(v)); }
@@ -97,13 +97,13 @@ template <int N>
 		template <typename R>
 			auto yield(void) const ->placeholder_with_F<N, R, void>
 			{ return placeholder_with_F<N, R, void>(); }
-		//optional    ˆø”‚ğ•K{‚Æ‚µ‚È‚¢iŒ³‚Ìƒtƒ@ƒ“ƒNƒ^‚ÌƒfƒtƒHƒ‹ƒgˆø”‚ğg‚¤“™j
+		//optional    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½{ï¿½Æ‚ï¿½ï¿½È‚ï¿½ï¿½iï¿½ï¿½ï¿½Ìƒtï¿½@ï¿½ï¿½ï¿½Nï¿½^ï¿½Ìƒfï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½j
 		auto operator !(void) const ->placeholder_with_F<N, void, nil*>
 			{ return placeholder_with_F<N, void, nil*>((nil*)0); }
 	};
 
-//convet from placeholder to argument    placeholder‚©‚çÀˆø”‚É•ÏŠ·
-	//no placeholder    my::detail::placeholderˆÈŠO
+//convet from placeholder to argument    placeholderï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É•ÏŠï¿½
+	//no placeholder    my::detail::placeholderï¿½ÈŠO
 template <typename T>
 	struct parameter_evaluate	{
 		template <typename V>
@@ -113,7 +113,7 @@ template <typename T>
 				{	return std::forward<V>(v);	}
 			};
 	};
-	//yieldef with a functor    ƒtƒ@ƒ“ƒNƒ^‚©‚çyield‚³‚ê‚½
+	//yieldef with a functor    ï¿½tï¿½@ï¿½ï¿½ï¿½Nï¿½^ï¿½ï¿½ï¿½ï¿½yieldï¿½ï¿½ï¿½ê‚½
 template <int N, typename F, typename R>
 	struct parameter_evaluate<placeholder_with_F<N, R, F>>	{
 		template <typename V>
@@ -133,39 +133,39 @@ template <int N, typename R>
 				{	return static_cast<R>(std::forward<V>(v));	}
 			};
 	};
-	//with default value    ƒfƒtƒHƒ‹ƒg’l‚ğ—^‚¦‚ç‚ê‚½
+	//with default value    ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½lï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½ï¿½ï¿½ê‚½
 template <int N, typename T>
 	struct parameter_evaluate<placeholder_with_F<N, void, T>>	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
-			struct eval	{			//if argument assigned    Àˆø”‚ ‚è
+			struct eval	{			//if argument assigned    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, T>& t, V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
-			struct eval<V, nil>	{	//without argument    Àˆø”‚È‚µ ¨ ƒfƒtƒHƒ‹ƒg’l
+			struct eval<V, nil>	{	//without argument    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ ï¿½ï¿½ ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½l
 				typedef T&	type;
 				static T& get(placeholder_with_F<N, void, T>& t, V&& v)
 				{	return t.get();	}
 			};
 	};
-	//optional    ˆø”‚ğ•K{‚Æ‚µ‚È‚¢iŒ³‚Ìƒtƒ@ƒ“ƒNƒ^‚ÌƒfƒtƒHƒ‹ƒgˆø”‚ğg‚¤“™j
+	//optional    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½{ï¿½Æ‚ï¿½ï¿½È‚ï¿½ï¿½iï¿½ï¿½ï¿½Ìƒtï¿½@ï¿½ï¿½ï¿½Nï¿½^ï¿½Ìƒfï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½j
 template <int N>
 	struct parameter_evaluate<placeholder_with_F<N, void, nil*>>	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
-			struct eval	{			//if argument assigned    Àˆø”‚ ‚è
+			struct eval	{			//if argument assigned    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, nil*>& t, V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
-			struct eval<V, nil>	{	//without argument    Àˆø”‚È‚µ ¨ Œ³‚Ìƒtƒ@ƒ“ƒNƒ^‚ÌƒfƒtƒHƒ‹ƒg’l
+			struct eval<V, nil>	{	//without argument    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Ìƒtï¿½@ï¿½ï¿½ï¿½Nï¿½^ï¿½Ìƒfï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½l
 				typedef nil*	type;
 				static nil* get(placeholder_with_F<N, void, nil*>& t, V&& v)
 				{	return (nil*)0;	}
 			};
 	};
-	//basic    Šî–{
+	//basic    ï¿½ï¿½ï¿½{
 template <int N>
 	struct parameter_evaluate<placeholder_with_F<N, void, void>>	{
 		template <typename V>
@@ -176,7 +176,7 @@ template <int N>
 			};
 	};
 
-//deal it as a raw ponter    ƒXƒ}[ƒgƒ|ƒCƒ“ƒ^“™‚ğ¶ƒ|ƒCƒ“ƒ^‚Æ“¯—l‚Éˆµ‚¤‚½‚ß‚Ì•ÏŠ·
+//deal it as a raw ponter    ï¿½Xï¿½}ï¿½[ï¿½gï¿½|ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½ğ¶ƒ|ï¿½Cï¿½ï¿½ï¿½^ï¿½Æ“ï¿½ï¿½lï¿½Éˆï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß‚Ì•ÏŠï¿½
 //T:int => nil*,  int* => int*,  smart_ptr<int> => int*
 template <typename T>
 	class raw_ptr_type	{
@@ -216,7 +216,7 @@ template <int N, typename A0, typename A1, typename A2, typename A3, typename A4
 				type;
 	};
 
-//convert from placeholder to it    placeholder‚È‚çÀˆø”‚à‚µ‚­‚ÍƒfƒtƒHƒ‹ƒgˆø”‚É•ÏŠ·
+//convert from placeholder to it    placeholderï¿½È‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íƒfï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½ï¿½É•ÏŠï¿½
 template <typename P, typename A1, typename A2, typename A3, typename A4, typename A5,
 												typename A6, typename A7, typename A8, typename A9>
 	class alt_type	{
@@ -228,7 +228,7 @@ template <typename P, typename A1, typename A2, typename A3, typename A4, typena
 		typedef typename std::conditional<std::is_same<type0, nil*>::value, nil, type0>::type type;
 	};
 
-//no nil type before N    nil‚Å‚Í‚È‚¢N‚æ‚è‘O‚ÌŒ^
+//no nil type before N    nilï¿½Å‚Í‚È‚ï¿½Nï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½ÌŒ^
 template <int N, typename A0, typename A1, typename A2, typename A3, typename A4, typename A5,
 												typename A6, typename A7, typename A8, typename A9>
 	struct nil_bound	{
@@ -243,7 +243,7 @@ template <typename A0, typename A1, typename A2, typename A3, typename A4, typen
 		static const int value = 0;
 	};
 //************************************************************************************************
-//argument type and result type / functor or mem fun   ˆø”Œ^‚Æ–ß’lŒ^‚Æƒtƒ@ƒ“ƒNƒ^^ƒƒ“ƒoŠÖ”‚Ì‹æ•Ê
+//argument type and result type / functor or mem fun   ï¿½ï¿½ï¿½ï¿½ï¿½^ï¿½Æ–ß’lï¿½^ï¿½Æƒtï¿½@ï¿½ï¿½ï¿½Nï¿½^ï¿½^ï¿½ï¿½ï¿½ï¿½ï¿½oï¿½Öï¿½ï¿½Ì‹ï¿½ï¿½ï¿½
 template <typename F, typename P1, typename P2, typename P3, typename P4, typename P5,
 												typename P6, typename P7, typename P8, typename P9>
 struct func_signature_base0	{
@@ -254,7 +254,7 @@ struct func_signature_base0	{
 	static P1 get1(); static P2 get2(); static P3 get3(); static P4 get4();
 	static P5 get5(); static P6 get6(); static P7 get7(); static P8 get8(); static P9 get9();
 	static typename raw_ptr_type<P1>::type	ptr1();
-	//N of p_n<N> is number of auguments     p_n<N>‚ÌN‚Íˆø”‚Ì”
+	//N of p_n<N> is number of auguments     p_n<N>ï¿½ï¿½Nï¿½Íˆï¿½ï¿½ï¿½ï¿½Ìï¿½
 	template <typename V> static	auto
 		test(V&& v, p_n<9>, decltype(   v(get1(), get2(), get3(), get4(), get5(), get6(), get7(), get8(), get9()), 1) = 0)
 			-> cr_pair<fnc_c, decltype(v(get1(), get2(), get3(), get4(), get5(), get6(), get7(), get8(), get9()))>;
@@ -348,7 +348,7 @@ struct func_signature_base0	{
 	static auto test(...)
 			-> cr_pair<nil, nil>;
 	};
-//augument type and result type    ˆø”Œ^‚Æ–ß’lŒ^
+//augument type and result type    ï¿½ï¿½ï¿½ï¿½ï¿½^ï¿½Æ–ß’lï¿½^
 template <int N , typename F, typename P1, typename P2, typename P3, typename P4, typename P5,
 														typename P6, typename P7, typename P8, typename P9>
 	struct func_signature_base : func_signature_base0<F, P1, P2, P3, P4, P5, P6, P7, P8, P9>	{
@@ -358,7 +358,7 @@ template <int N , typename F, typename P1, typename P2, typename P3, typename P4
 		typedef typename cr_type::call_type									call_t;
 		typedef typename cr_type::result_type								result_t;
 	};
-//the set of augument types    ˆø”W‡‚ğŒˆ’è------------------------------------------------------
+//the set of augument types    ï¿½ï¿½ï¿½ï¿½ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½------------------------------------------------------
 template <int N,
 	typename F, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9,
 	typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9 >
@@ -375,7 +375,7 @@ template <int N,
 		typename alt_type<P9, A1, A2, A3, A4, A5, A6, A7, A8, A9>::type >
 	{	};
 //************************************************************************************************
-//arguments    ƒpƒ‰ƒ[ƒ^
+//arguments    ï¿½pï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½^
 template <typename P, int N>
 	struct ParamOf : param_buf<P>	{
 		typedef param_buf<P> base;
@@ -387,12 +387,12 @@ template <typename P, int N>
 		ParamOf(const ParamOf<P, N>& p) : base(p)	{	}
 	};
 //------------------------------------------------------------------------------------------------
-//convert from placeholder to argument     placeholder‚¾‚Á‚½‚çÀˆø”‚É•ÏŠ·‚·‚é SFINAE
+//convert from placeholder to argument     placeholderï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É•ÏŠï¿½ï¿½ï¿½ï¿½ï¿½ SFINAE
 template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
 struct passer	{
 	nil* operator ()(const nil*, A1&& a1, A2&& a2, A3&& a3, A4&& a4, A5&& a5, A6&& a6, A7&& a7, A8&& a8, A9&& a9)
 		{	return (nil*)(0);	}
-	template <typename P>	//return ref    QÆ‚ğ•Ô‚·
+	template <typename P>	//return ref    ï¿½Qï¿½Æ‚ï¿½ï¿½Ô‚ï¿½
 		typename P::param_t& operator ()(P* p, A1&& a1, A2&& a2, A3&& a3, A4&& a4, A5&& a5, A6&& a6, A7&& a7, A8&& a8, A9&& a9,
 			typename std::enable_if<P::placeholder==0>::type* = 0)
 		{	return p->get();	}
@@ -446,7 +446,7 @@ struct passer	{
 template <typename S, typename T> struct executer;
 //************************************************************************************************
 
-//main class    –{‘Ì
+//main class    ï¿½{ï¿½ï¿½
 template <typename P, typename T = nil, int N = 0>
 struct BindOf : protected ParamOf<P, N>, protected T	{
 protected:
@@ -611,7 +611,7 @@ public:
 		{	return (*this)(nil(), nil(), nil(), nil(), nil(), nil(), nil(), nil(), nil());	}
 };
 //************************************************************************************************
-//change from pObj->*  to  Obj.*       pObj->*  ‚ğ  Obj.* ‚É•ÏŠ·
+//change from pObj->*  to  Obj.*       pObj->*  ï¿½ï¿½  Obj.* ï¿½É•ÏŠï¿½
 template<typename T>
 	struct p_o			{
 		template <typename U>
@@ -790,7 +790,7 @@ namespace my	{
 			placeholder_with_F<N, void, void>();
 	}	//namespace detail
 
-//pre-defined placeholders _1st, _2nd, _3rd, _4th, ...      ’è‹`Ï‚İƒvƒŒ[ƒXƒzƒ‹ƒ_ 
+//pre-defined placeholders _1st, _2nd, _3rd, _4th, ...      ï¿½ï¿½ï¿½`ï¿½Ï‚İƒvï¿½ï¿½ï¿½[ï¿½Xï¿½zï¿½ï¿½ï¿½_ 
 	namespace placeholders	{
 		namespace {
 			detail::placeholder_with_F<1, void, void>&	_1st = detail::placeholders_deploy<1>::static_N;
@@ -804,7 +804,7 @@ namespace my	{
 			detail::placeholder_with_F<9, void, void>&	_9th = detail::placeholders_deploy<9>::static_N;
 		}
 	}	// my::placeholders
-//user interfade / rbind functions       ƒ†[ƒU‚ªg‚¤ rbindŠÖ”
+//user interfade / rbind functions       ï¿½ï¿½ï¿½[ï¿½Uï¿½ï¿½ï¿½gï¿½ï¿½ rbindï¿½Öï¿½
 template <typename F>
 	auto rbind(F&& f)-> typename detail::rbind_type<F>::type
 	{	return detail::BindOf<F>(std::forward<F>(f));	}
