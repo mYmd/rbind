@@ -13,20 +13,20 @@ struct nil	{
 	typedef nil param_t;
 };
 
-//number of arguments    �����̐�
+//number of arguments    引数の数
 template <int N> struct p_n	{
 	static const int value = N;
 };
 
-//type of invoke    �Ăяo���̌^
+//type of invoke    呼び出しの型
 	//obj.*, pobj->*
 struct mem_c	{	};
 	//obj.*(), pobj->*()
 struct memF_c	{	};
-	//functor    �t�@���N�^�^�i�t���[�֐��A�����_�j
+	//functor    ファンクタ型（フリー関数、ラムダ）
 struct fnc_c	{	};
 
-//pair <type of invoke, return type>    �Ăяo���̌^�Ɩ߂��l�^�̃y�A
+//pair <type of invoke, return type>    呼び出しの型と戻り値型のペア
 template <typename C, typename R>
 	struct cr_pair	{
 		typedef C call_type;
@@ -38,12 +38,12 @@ template<typename T>
 	struct remove_ref_cv	{
 		typedef typename std::remove_reference<typename std::remove_cv<T>::type>::type	type;
 	};
-// type compair without const/volatile�����ƎQ�Ƒ������O���Č^�̓��ꐫ�����r
+// type compair without const/volatile属性と参照属性を外して型の同一性を比較
 template<typename T, typename U>
 	struct is_same_ignoring_cv_ref :
 		std::is_same<typename remove_ref_cv<T>::type, typename remove_ref_cv<U>::type>	{	};
 
-//parameter buffer    �p�����[�^�o�b�t�@
+//parameter buffer    パラメータバッファ
 template <typename T>
 	struct param_buf	{
 		mutable T		val;
@@ -63,25 +63,25 @@ template <typename T>
 	};
 
 //placeholder
-	//yielded     _1st.yield<T>(functor)    �l���]������placeholder
+	//yielded     _1st.yield<T>(functor)    値を評価するplaceholder
 template <int N, typename R, typename F>
 	struct placeholder_with_F : param_buf<F>	{
 		placeholder_with_F(F&& f) : param_buf<F>(std::forward<F>(f))		{ }
 		template <typename V>
 			R eval(V&& v) const	{ return (param_buf<F>::get())(std::forward<V>(v)); }
 	};
-	//yielded    _2nd.yield<T>()    statc_cast����placeholder
+	//yielded    _2nd.yield<T>()    statc_castするplaceholder
 template <int N, typename R>
 	struct placeholder_with_F<N, R, void>		{	};
-	//with default parameter    �f�t�H���g�������t�^���ꂽplaceholder
+	//with default parameter    デフォルト引数を付与されたplaceholder
 template <int N, typename T>
 	struct placeholder_with_F<N, void, T> : param_buf<T>	{
 		placeholder_with_F(T&& t) : param_buf<T>(std::forward<T>(t)) { }
 	};
-	//basic placeholder    ���{��placeholder
+	//basic placeholder    基本のplaceholder
 template <int N>
 	struct placeholder_with_F<N, void, void>	{
-		//assign the default parameter    �f�t�H���g�l�� = �Őݒ肷��
+		//assign the default parameter    デフォルト値を = で設定する
 		template <typename V>
 			auto operator =(V&& v) const -> placeholder_with_F<N, void, V>
 			{ return placeholder_with_F<N, void, V>(std::forward<V>(v)); }
@@ -97,13 +97,13 @@ template <int N>
 		template <typename R>
 			auto yield(void) const ->placeholder_with_F<N, R, void>
 			{ return placeholder_with_F<N, R, void>(); }
-		//optional    �������K�{�Ƃ��Ȃ��i���̃t�@���N�^�̃f�t�H���g�������g�����j
+		//optional    引数を必須としない（元のファンクタのデフォルト引数を使う等）
 		auto operator !(void) const ->placeholder_with_F<N, void, nil*>
 			{ return placeholder_with_F<N, void, nil*>((nil*)0); }
 	};
 
-//convet from placeholder to argument    placeholder�����������ɕϊ�
-	//no placeholder    my::detail::placeholder�ȊO
+//convet from placeholder to argument    placeholderから実引数に変換
+	//no placeholder    my::detail::placeholder以外
 template <typename T>
 	struct parameter_evaluate	{
 		template <typename V>
@@ -113,7 +113,7 @@ template <typename T>
 				{	return std::forward<V>(v);	}
 			};
 	};
-	//yieldef with a functor    �t�@���N�^����yield���ꂽ
+	//yieldef with a functor    ファンクタからyieldされた
 template <int N, typename F, typename R>
 	struct parameter_evaluate<placeholder_with_F<N, R, F>>	{
 		template <typename V>
@@ -133,39 +133,39 @@ template <int N, typename R>
 				{	return static_cast<R>(std::forward<V>(v));	}
 			};
 	};
-	//with default value    �f�t�H���g�l���^�����ꂽ
+	//with default value    デフォルト値を与えられた
 template <int N, typename T>
 	struct parameter_evaluate<placeholder_with_F<N, void, T>>	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
-			struct eval	{			//if argument assigned    ����������
+			struct eval	{			//if argument assigned    実引数あり
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, T>& t, V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
-			struct eval<V, nil>	{	//without argument    �������Ȃ� �� �f�t�H���g�l
+			struct eval<V, nil>	{	//without argument    実引数なし → デフォルト値
 				typedef T&	type;
 				static T& get(placeholder_with_F<N, void, T>& t, V&& v)
 				{	return t.get();	}
 			};
 	};
-	//optional    �������K�{�Ƃ��Ȃ��i���̃t�@���N�^�̃f�t�H���g�������g�����j
+	//optional    引数を必須としない（元のファンクタのデフォルト引数を使う等）
 template <int N>
 	struct parameter_evaluate<placeholder_with_F<N, void, nil*>>	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
-			struct eval	{			//if argument assigned    ����������
+			struct eval	{			//if argument assigned    実引数あり
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, nil*>& t, V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
-			struct eval<V, nil>	{	//without argument    �������Ȃ� �� ���̃t�@���N�^�̃f�t�H���g�l
+			struct eval<V, nil>	{	//without argument    実引数なし → 元のファンクタのデフォルト値
 				typedef nil*	type;
 				static nil* get(placeholder_with_F<N, void, nil*>& t, V&& v)
 				{	return (nil*)0;	}
 			};
 	};
-	//basic    ���{
+	//basic    基本
 template <int N>
 	struct parameter_evaluate<placeholder_with_F<N, void, void>>	{
 		template <typename V>
@@ -176,7 +176,7 @@ template <int N>
 			};
 	};
 
-//deal it as a raw ponter    �X�}�[�g�|�C���^���𐶃|�C���^�Ɠ��l�Ɉ������߂̕ϊ�
+//deal it as a raw ponter    スマートポインタ等を生ポインタと同様に扱うための変換
 //T:int => nil*,  int* => int*,  smart_ptr<int> => int*
 template <typename T>
 	class raw_ptr_type	{
@@ -216,7 +216,7 @@ template <int N, typename A0, typename A1, typename A2, typename A3, typename A4
 				type;
 	};
 
-//convert from placeholder to it    placeholder�Ȃ��������������̓f�t�H���g�����ɕϊ�
+//convert from placeholder to it    placeholderなら実引数もしくはデフォルト引数に変換
 template <typename P, typename A1, typename A2, typename A3, typename A4, typename A5,
 												typename A6, typename A7, typename A8, typename A9>
 	class alt_type	{
@@ -228,7 +228,7 @@ template <typename P, typename A1, typename A2, typename A3, typename A4, typena
 		typedef typename std::conditional<std::is_same<type0, nil*>::value, nil, type0>::type type;
 	};
 
-//no nil type before N    nil�ł͂Ȃ�N�����O�̌^
+//no nil type before N    nilではないNより前の型
 template <int N, typename A0, typename A1, typename A2, typename A3, typename A4, typename A5,
 												typename A6, typename A7, typename A8, typename A9>
 	struct nil_bound	{
@@ -243,7 +243,7 @@ template <typename A0, typename A1, typename A2, typename A3, typename A4, typen
 		static const int value = 0;
 	};
 //************************************************************************************************
-//argument type and result type / functor or mem fun   �����^�Ɩߒl�^�ƃt�@���N�^�^�����o�֐��̋���
+//argument type and result type / functor or mem fun   引数型と戻値型とファンクタ／メンバ関数の区別
 template <typename F, typename P1, typename P2, typename P3, typename P4, typename P5,
 												typename P6, typename P7, typename P8, typename P9>
 struct func_signature_base0	{
@@ -254,7 +254,7 @@ struct func_signature_base0	{
 	static P1 get1(); static P2 get2(); static P3 get3(); static P4 get4();
 	static P5 get5(); static P6 get6(); static P7 get7(); static P8 get8(); static P9 get9();
 	static typename raw_ptr_type<P1>::type	ptr1();
-	//N of p_n<N> is number of auguments     p_n<N>��N�͈����̐�
+	//N of p_n<N> is number of auguments     p_n<N>のNは引数の数
 	template <typename V> static	auto
 		test(V&& v, p_n<9>, decltype(   v(get1(), get2(), get3(), get4(), get5(), get6(), get7(), get8(), get9()), 1) = 0)
 			-> cr_pair<fnc_c, decltype(v(get1(), get2(), get3(), get4(), get5(), get6(), get7(), get8(), get9()))>;
@@ -348,7 +348,7 @@ struct func_signature_base0	{
 	static auto test(...)
 			-> cr_pair<nil, nil>;
 	};
-//augument type and result type    �����^�Ɩߒl�^
+//augument type and result type    引数型と戻値型
 template <int N , typename F, typename P1, typename P2, typename P3, typename P4, typename P5,
 														typename P6, typename P7, typename P8, typename P9>
 	struct func_signature_base : func_signature_base0<F, P1, P2, P3, P4, P5, P6, P7, P8, P9>	{
@@ -358,7 +358,7 @@ template <int N , typename F, typename P1, typename P2, typename P3, typename P4
 		typedef typename cr_type::call_type									call_t;
 		typedef typename cr_type::result_type								result_t;
 	};
-//the set of augument types    �����W��������------------------------------------------------------
+//the set of augument types    引数集合を決定------------------------------------------------------
 template <int N,
 	typename F, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9,
 	typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9 >
@@ -375,7 +375,7 @@ template <int N,
 		typename alt_type<P9, A1, A2, A3, A4, A5, A6, A7, A8, A9>::type >
 	{	};
 //************************************************************************************************
-//arguments    �p�����[�^
+//arguments    パラメータ
 template <typename P, int N>
 	struct ParamOf : param_buf<P>	{
 		typedef param_buf<P> base;
@@ -387,12 +387,12 @@ template <typename P, int N>
 		ParamOf(const ParamOf<P, N>& p) : base(p)	{	}
 	};
 //------------------------------------------------------------------------------------------------
-//convert from placeholder to argument     placeholder���������������ɕϊ����� SFINAE
+//convert from placeholder to argument     placeholderだったら実引数に変換する SFINAE
 template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
 struct passer	{
 	nil* operator ()(const nil*, A1&& a1, A2&& a2, A3&& a3, A4&& a4, A5&& a5, A6&& a6, A7&& a7, A8&& a8, A9&& a9)
 		{	return (nil*)(0);	}
-	template <typename P>	//return ref    �Q�Ƃ��Ԃ�
+	template <typename P>	//return ref    参照を返す
 		typename P::param_t& operator ()(P* p, A1&& a1, A2&& a2, A3&& a3, A4&& a4, A5&& a5, A6&& a6, A7&& a7, A8&& a8, A9&& a9,
 			typename std::enable_if<P::placeholder==0>::type* = 0)
 		{	return p->get();	}
@@ -446,7 +446,7 @@ struct passer	{
 template <typename S, typename T> struct executer;
 //************************************************************************************************
 
-//main class    �{��
+//main class    本体
 template <typename P, typename T = nil, int N = 0>
 struct BindOf : protected ParamOf<P, N>, protected T	{
 protected:
@@ -611,7 +611,7 @@ public:
 		{	return (*this)(nil(), nil(), nil(), nil(), nil(), nil(), nil(), nil(), nil());	}
 };
 //************************************************************************************************
-//change from pObj->*  to  Obj.*       pObj->*  ��  Obj.* �ɕϊ�
+//change from pObj->*  to  Obj.*       pObj->*  を  Obj.* に変換
 template<typename T>
 	struct p_o			{
 		template <typename U>
@@ -790,7 +790,7 @@ namespace my	{
 			placeholder_with_F<N, void, void>();
 	}	//namespace detail
 
-//pre-defined placeholders _1st, _2nd, _3rd, _4th, ...      ���`�ς݃v���[�X�z���_ 
+//pre-defined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
 		namespace {
 			detail::placeholder_with_F<1, void, void>&	_1st = detail::placeholders_deploy<1>::static_N;
@@ -804,7 +804,7 @@ namespace my	{
 			detail::placeholder_with_F<9, void, void>&	_9th = detail::placeholders_deploy<9>::static_N;
 		}
 	}	// my::placeholders
-//user interfade / rbind functions       ���[�U���g�� rbind�֐�
+//user interfade / rbind functions       ユーザが使う rbind関数
 template <typename F>
 	auto rbind(F&& f)-> typename detail::rbind_type<F>::type
 	{	return detail::BindOf<F>(std::forward<F>(f));	}
