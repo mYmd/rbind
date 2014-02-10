@@ -8,7 +8,7 @@ rbind は std::bind を参照ベースにしたものです。
 専用のプレースホルダと組み合わせれば追加機能も使えます。
 
   all arguments are reference base without std::ref.  
-  引数は参照ベースであり、std::refは必要はない。
+  引数は参照ベースであり、std::refは必要としない。
 
   you can set default values for arguments with specital placeholders(_1st, _2nd, ...)  
   デフォルト引数を設定できる(専用プレースホルダ _1st, _2nd, ... を使った場合)
