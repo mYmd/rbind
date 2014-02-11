@@ -2,16 +2,16 @@ rbind
 =====
 
 rbind is alternative of std::bind that is reference base.  
-It has additional function work with special placeholders for it.
+It has additional function using special placeholders together.
 
 rbind は std::bind を参照ベースにしたものです。  
 専用のプレースホルダと組み合わせれば追加機能も使えます。
 
-  all arguments are reference base without std::ref.  
-  引数は参照ベースであり、std::refは必要としない。
+  all binded arguments are reference base without std::ref.  
+  bindしたすべての引数は参照ベースであり、std::refは必要としない。
 
-  you can set default values for arguments with specital placeholders(_1st, _2nd, ...)  
-  デフォルト引数を設定できる(専用プレースホルダ _1st, _2nd, ... を使った場合)
+  you can set default values for specital placeholders(_1st, _2nd, ...)  
+  専用プレースホルダ( _1st, _2nd, ... )にはデフォルト引数を設定できる
 
   you can let arguments be optional  
   引数をオプションにできる
@@ -23,4 +23,4 @@ rbind は std::bind を参照ベースにしたものです。
   第一引数もプレースホルダにできる
 
   variadic templates are not used then it accept 9 or fewer arguments  
-  可変長テンプレートは使っていないので引数の数は９まで
+  可変長テンプレートは使っていないので引数の数は9個まで
