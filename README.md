@@ -21,3 +21,7 @@ rbind は std::bind を参照ベースにしたものです。
 
   you can set a placeholder for the first argument  
   第一引数もプレースホルダにできる
+
+  rbind.hpp is old version (without variadic templates)
+  rbindv.hpp is new version (with variadic templates)
+  rbindv.hpp はvariadic template を使用したもので、rbind.hppはvariadic template未使用版
