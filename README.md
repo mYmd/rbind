@@ -21,6 +21,3 @@ rbind は std::bind を参照ベースにしたものです。
 
   you can set a placeholder for the first argument  
   第一引数もプレースホルダにできる
-
-  variadic templates are not used then it accept 9 or fewer arguments  
-  可変長テンプレートは使っていないので引数の数は9個まで
