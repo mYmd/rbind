@@ -1,4 +1,4 @@
-//this header is old version (do not use variadic templates)   (use rbindv.hpp)
+//this header is old version (no variadic templates)   (please use new rbindv.hpp)
 //rbind header
 //Copyright (c) 2014 Masahiko Yamada
 
