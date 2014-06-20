@@ -176,7 +176,7 @@ namespace detail	{
 			};
 	};
 	//---------------------------------------------------------------------------------
-	//deal it as a raw ponter    スマートポインタ等を生ポインタと同様に扱うための変換 =======
+	//handle a type as a raw ponter    スマートポインタ等を生ポインタと同様に扱うための変換 =======
 	//T:int => nil*,  int* => int*,  smart_ptr<int> => int*
 	template <typename T>
 	class raw_ptr_type	{
@@ -394,8 +394,10 @@ namespace detail	{
 		typedef std::tuple<ParamOf<Vars>...>		Params1;
 		Params1										params1;
 		//-----------------------------------------------
+		template<typename Params2T, typename D>
+		struct invoke_type_i;
 		template<typename Params2T, size_t... indice>
-		struct invoke_type_i	{
+		struct invoke_type_i<Params2T, index_tuple<indice...>>	{
 			static const Params1&	get1();
 			static Params2T			get2();
 			typedef decltype(std::forward_as_tuple(
@@ -406,18 +408,15 @@ namespace detail	{
 			typedef typename invoke_type::call_type				call_type;
 			typedef typename invoke_type::result_type			result_type;
 		};
-		template<typename Params2T, typename D>
-		struct invoke_type_t;
-		template<typename Params2T, size_t... indice>
-		struct invoke_type_t<Params2T, index_tuple<indice...>> : invoke_type_i<Params2T, indice...>	{	};
 		//
 		template<typename Params2T, size_t... indice>
 		auto call_imple(Params2T&& params2, index_tuple<indice...> dummy) const
-			->typename invoke_type_i<Params2T, indice...>::result_type
+			->typename invoke_type_i<Params2T, index_tuple<indice...>>::result_type
 		{
-			typedef typename invoke_type_i<Params2T, indice...>::actual_indice		actual_indice;
-			typedef typename invoke_type_i<Params2T, indice...>::call_type			call_type;
-			typedef typename invoke_type_i<Params2T, indice...>::result_type		result_type;
+			typedef invoke_type_i<Params2T, index_tuple<indice...>>		invoke_type_t;
+			typedef typename invoke_type_t::actual_indice				actual_indice;
+			typedef typename invoke_type_t::call_type					call_type;
+			typedef typename invoke_type_t::result_type					result_type;
 			executer<result_type, call_type, actual_indice>	theExecuter;
 			return 
 				theExecuter.exec(
@@ -429,7 +428,7 @@ namespace detail	{
 		//
 		template <typename... Params2>
 		auto operator ()(Params2&&... params2) const
-			->typename invoke_type_t<std::tuple<Params2...>, index_tuple_type>::result_type
+			->typename invoke_type_i<std::tuple<Params2...>, index_tuple_type>::result_type
 		{
 			return call_imple(	std::forward_as_tuple(std::forward<Params2>(params2)...),
 								index_tuple_type()
