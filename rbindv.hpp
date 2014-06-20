@@ -402,24 +402,21 @@ namespace detail	{
 			static Params2T			get2();
 			typedef decltype(std::forward_as_tuple(
 								my::detail::template get_and_convert<indice>(get1(), get2())...)
-							)															ParamTuple;
-			typedef typename my::detail::invokeType<ParamTuple>	invoke_type;
-			typedef typename invoke_type::actual_indice			actual_indice;
-			typedef typename invoke_type::call_type				call_type;
-			typedef typename invoke_type::result_type			result_type;
+							)			ParamTuple;
+			typedef typename my::detail::invokeType<ParamTuple>			invoke_type;
+			typedef typename invoke_type::actual_indice					actual_indice;
+			typedef typename invoke_type::call_type						call_type;
+			typedef typename invoke_type::result_type					result_type;
+			typedef executer<result_type, call_type, actual_indice>		Executer_t;
 		};
 		//
 		template<typename Params2T, size_t... indice>
 		auto call_imple(Params2T&& params2, index_tuple<indice...> dummy) const
 			->typename invoke_type_i<Params2T, index_tuple<indice...>>::result_type
 		{
-			typedef invoke_type_i<Params2T, index_tuple<indice...>>		invoke_type_t;
-			typedef typename invoke_type_t::actual_indice				actual_indice;
-			typedef typename invoke_type_t::call_type					call_type;
-			typedef typename invoke_type_t::result_type					result_type;
-			executer<result_type, call_type, actual_indice>	theExecuter;
+			typename invoke_type_i<Params2T, index_tuple<indice...>>::Executer_t	Executer;
 			return 
-				theExecuter.exec(
+				Executer.exec(
 					get_and_convert<indice>(params1, std::forward<Params2T>(params2))...
 				);
 		}
