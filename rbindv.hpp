@@ -73,32 +73,24 @@ namespace detail	{
 	struct param_buf	{
 		mutable T		val;
 		typedef T		type;
-		T& get() const
-		{	return val;	}
 		param_buf(T&& t) : val(std::forward<T>(t))				{ }
-		param_buf(param_buf<T>&& x) : val(std::forward<T>(x.val))	{ }
-		param_buf(const param_buf<T>& x) : val(x.val)					{ }
+		T& get() const				{	return val;	}
 	};
 	//		ref
 	template <typename T>
 	struct param_buf<T&>	{
-		T&				val;
+		T*			pval;
 		typedef T&		type;
-		T& get() const				{ return val; }
-		param_buf(T& t) : val(t)					{	}
-		param_buf(const param_buf<T&>& x) : val(x.val) {	}
-		param_buf& operator=(const param_buf&);
+		param_buf(T& t) : pval(&t)		{	}
+		T& get() const				{ return *pval; }
 	};
 	//		rref
 	template <typename T>
 	struct param_buf<T&&>	{
 		mutable T		val;
 		typedef T		type;
-		T& get() const
-		{	return val;	}
 		param_buf(T&& t) : val(std::forward<T>(t))				{ }
-		param_buf(param_buf<T>&& x) : val(std::forward<T>(x.val))	{ }
-		param_buf(const param_buf<T>& x) : val(x.val)					{ }
+		T& get() const				{	return val;	}
 	};
 
 	//placeholder =======================================================================
@@ -231,17 +223,15 @@ namespace detail	{
 		typedef typename remove_ref_cv<P>::type		p_h;
 		static const size_t placeholder = std::is_placeholder<p_h>::value;
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
-		ParamOf(ParamOf<P>&& p) : base(std::forward<base>(p))	{	}
-		ParamOf(const ParamOf<P>& p) : base(p)	{	}
 	};
 	//----------------------------------------------------------------------------
 	template <typename P0, typename Params, size_t N, bool B>
-	class type_shift_1	{
+	class type_alternative	{
 		typedef typename remove_ref_cv<typename P0::param_t>::type		ph;
 		typedef typename std::tuple_element<N-1, Params>::type			type_a;
 		typedef typename parameter_evaluate<ph>::template eval<type_a>	vtype;
 	public:
-		typedef typename vtype::type				type;
+		typedef typename vtype::type			type;
 		static type get(const P0& p, Params&& params)
 		{
 			return vtype::get(p.get(), std::get<N-1>(std::forward<Params>(params)));
@@ -249,8 +239,8 @@ namespace detail	{
 	};
 
 	template <typename P0, typename Params>
-	struct type_shift_1<P0, Params, 0, true>	{
-		typedef typename P0::param_t&				type;	//ここ
+	struct type_alternative<P0, Params, 0, true>	{
+		typedef typename P0::param_t&			type;	//ここ
 		static type get(const P0& p, Params&& )
 		{
 			return p.get();
@@ -258,11 +248,11 @@ namespace detail	{
 	};
 
 	template <typename P0, typename Params, size_t N>
-	class type_shift_1<P0, Params, N, false>		{
+	class type_alternative<P0, Params, N, false>		{
 		typedef typename remove_ref_cv<typename P0::param_t>::type		ph;
 		typedef typename parameter_evaluate<ph>::template eval<nil>		vtype;
 	public:
-		typedef typename vtype::type				type;
+		typedef typename vtype::type			type;
 		static type get(const P0& p, Params&& )
 		{
 			return vtype::get(p.get(), nil());
@@ -270,11 +260,11 @@ namespace detail	{
 	};
 	//----------------------------------------------------------------------------
 	template <size_t N, typename Params1, typename Params2>
-	class get_and_convert_result	{
+	class alternative_result	{
 		typedef typename std::tuple_element<N, Params1>::type		P0;
 		static const size_t	placeholder	= P0::placeholder;
 		static const bool small = (placeholder <= std::tuple_size<Params2>::value);
-		typedef type_shift_1<P0, Params2, placeholder, small>	alt_type;
+		typedef type_alternative<P0, Params2, placeholder, small>	alt_type;
 	public:
 		typedef typename alt_type::type		result_type;
 		static result_type get(const Params1& params1, Params2&& params2)
@@ -285,9 +275,9 @@ namespace detail	{
 
 	template<size_t N, typename Params1, typename Params2>
 	auto get_and_convert(const Params1& params1, Params2&& params2)
-		->typename get_and_convert_result<N, Params1, Params2>::result_type
+		->typename alternative_result<N, Params1, Params2>::result_type
 	{
-		typedef get_and_convert_result<N, Params1, Params2>		convert_result;
+		typedef alternative_result<N, Params1, Params2>		convert_result;
 		return convert_result::get(params1, std::forward<Params2>(params2));
 	}
 
@@ -427,7 +417,6 @@ namespace detail	{
 		typedef typename index_range<0, N>::type	index_tuple_type;
 		typedef std::tuple<ParamOf<Vars>...>		Params1;
 		Params1										params1;
-		BindOf& operator =(const BindOf&);
 		//-----------------------------------------------
 		template<typename Params2T, typename D>		struct invoke_type_i;
 		//------------
