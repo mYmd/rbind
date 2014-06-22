@@ -10,10 +10,10 @@ rbind は std::bind を参照ベースにしたものです。
   all binded arguments are reference base without std::ref.  
   bindしたすべての引数は参照ベースであり、std::refは必要としない。
 
-  you can set default values for specital placeholders _1st, _2nd, ...
+  you can set default values for specital placeholders _1st, _2nd, ...  
   専用プレースホルダ _1st, _2nd, ... にはデフォルト引数を設定できる
   
-  You can create range of placeholder   range(_2nd, _5th)      --->    _2nd, _3rd, _4th, _5th
+  You can create range of placeholder   range(_2nd, _5th)      --->    _2nd, _3rd, _4th, _5th  
   プレースホルダを範囲で指定できる      range(_2nd, _5th)      --->    _2nd, _3rd, _4th, _5th
 
   you can let arguments be optional  
