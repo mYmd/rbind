@@ -13,43 +13,45 @@ namespace detail	{
 	template<size_t... indice>
 	struct index_tuple	{	};
 
-	template <size_t first, size_t last, class result = index_tuple<>, bool flag = (first >= last)>
+	template <size_t first, size_t last, typename result = index_tuple<>, bool flag = (first >= last)>
 	struct index_range
 		{	typedef result type;	};
 
 	template <size_t first, size_t last, size_t... indice>
-	struct index_range<first, last, index_tuple<indice...>, false> : index_range<first + 1, last, index_tuple<indice..., first>>
-		{	};
+		struct	index_range<first, last, index_tuple<indice...>, false> :
+					index_range<first + 1, last, index_tuple<indice..., first>>		{	};
 
 	//std::remove_reference && std::remove_cv
 	template<typename T>
 	struct remove_ref_cv	{
 		typedef typename std::remove_reference<typename std::remove_cv<T>::type>::type	type;
 	};
+
 	// type compair without const/volatile and reference   cv属性と参照属性を外して型の同一性を比較
 	template<typename T, typename U>
 		struct is_same_ignoring_cv_ref :
 			std::is_same<typename remove_ref_cv<T>::type, typename remove_ref_cv<U>::type>	{	};
-
-	//--------------------------------------------------
+	//--------------------------------------------------------------------
+	//	[type0, type1, type2, ..., typeM, nil) ... typeN ,,,
+	//       0,     1,     2, ....        M+1
 	template<typename Head, typename... Tail>
 	struct tuple_limit	{
 		static const size_t value = is_same_ignoring_cv_ref<Head, nil>::value?
 												0								:
 												1 + tuple_limit<Tail...>::value	;
 	};
-
+	//
 	template<typename Head>
 	struct tuple_limit<Head>	{
 		static const size_t value = is_same_ignoring_cv_ref<Head, nil>::value? 0: 1;
 	};
-
+	//
 	template<typename... Params>
 	struct tuple_limit<std::tuple<Params...>>	{
 		static const size_t value = tuple_limit<Params...>::value;
 	};
-
-	//type of invoke    呼び出しの型 ===================================
+	//--------------------------------------------------------------------
+	//type of invoke    呼び出しの型
 	//obj.*, pobj->*
 	struct mem_c	{	};
 	//obj.*(), pobj->*()
@@ -57,11 +59,11 @@ namespace detail	{
 	//functor    ファンクタ型（フリー関数、ラムダ）
 	struct fnc_c	{	};
 	//==================================================================
-	//pair <type of invoke, return type>    呼び出しの型と戻り値型のペア
+	//tuple<type of invoke, return type, sizeof... parameters>    呼び出しの型
 	template <typename C, typename R, size_t N>
-	struct cr_pair	{
-		typedef C call_type;
-		typedef R result_type;
+	struct sig_type		{
+		typedef C	call_type;
+		typedef R	result_type;
 		static const size_t value = N;
 	};
 	//==================================================================
@@ -77,6 +79,7 @@ namespace detail	{
 		param_buf(param_buf<T>&& x) : val(std::forward<T>(x.val))	{ }
 		param_buf(const param_buf<T>& x) : val(x.val)					{ }
 	};
+	//		ref
 	template <typename T>
 	struct param_buf<T&>	{
 		T&				val;
@@ -84,26 +87,41 @@ namespace detail	{
 		T& get() const				{ return val; }
 		param_buf(T& t) : val(t)					{	}
 		param_buf(const param_buf<T&>& x) : val(x.val) {	}
+		param_buf& operator=(const param_buf&);
+	};
+	//		rref
+	template <typename T>
+	struct param_buf<T&&>	{
+		mutable T		val;
+		typedef T		type;
+		T& get() const
+		{	return val;	}
+		param_buf(T&& t) : val(std::forward<T>(t))				{ }
+		param_buf(param_buf<T>&& x) : val(std::forward<T>(x.val))	{ }
+		param_buf(const param_buf<T>& x) : val(x.val)					{ }
 	};
 
-//placeholder ===========================================================================
+	//placeholder =======================================================================
 	//yield     _1st.yield<T>(functor)    値を評価するplaceholder
-	template <int N, typename R, typename F>
+	template <size_t N, typename R, typename F>
 	struct placeholder_with_F : param_buf<F>	{
 		placeholder_with_F(F&& f) : param_buf<F>(std::forward<F>(f))		{ }
 		template <typename V>
 			R eval(V&& v) const	{ return (param_buf<F>::get())(std::forward<V>(v)); }
 	};
+
 	//yield    _2nd.yield<T>()    statc_castするplaceholder
-	template <int N, typename R>
+	template <size_t N, typename R>
 	struct placeholder_with_F<N, R, void>		{	};
+
 	//with default parameter    デフォルト引数を付与されたplaceholder
-	template <int N, typename T>
+	template <size_t N, typename T>
 	struct placeholder_with_F<N, void, T> : param_buf<T>	{
 		placeholder_with_F(T&& t) : param_buf<T>(std::forward<T>(t)) { }
 	};
+
 	//basic placeholder    基本のplaceholder
-	template <int N>
+	template <size_t N>
 	struct placeholder_with_F<N, void, void>	{
 		//assign the default parameter    デフォルト値を = で設定する
 		template <typename V>
@@ -118,19 +136,29 @@ namespace detail	{
 			{ return placeholder_with_F<N, R, void>(); }
 	};
 
+	//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
+	template <size_t M, size_t N>
+	auto range(placeholder_with_F<M, void, void> , placeholder_with_F<N, void, void> )
+		->typename index_range<M, N+1>::type
+	{
+		return typename index_range<M, N+1>::type{};
+	}
+
+	//=======================================================================================
 	//convet from placeholder to argument    placeholderから実引数に変換 ====================
-	//no placeholder    my::detail::placeholder以外
+	//not my placeholder    my::detail::placeholder以外
 	template <typename T>
 	struct parameter_evaluate	{
 		template <typename V>
 			struct eval	{
 				typedef V	type;
-				static V&& get(T& t, V&& v)
+				static V&& get(T& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 	};
+
 	//yield with a functor    ファンクタからyieldされた
-	template <int N, typename F, typename R>
+	template <size_t N, typename F, typename R>
 	struct parameter_evaluate<placeholder_with_F<N, R, F>>	{
 		template <typename V>
 			struct eval	{
@@ -139,39 +167,42 @@ namespace detail	{
 				{	return t.eval(std::forward<V>(v));	}
 			};
 	};
+
 	//static_cast
-	template <int N, typename R>
+	template <size_t N, typename R>
 	struct parameter_evaluate<placeholder_with_F<N, R, void>>	{
 		template <typename V>
 			struct eval	{
 				typedef R	type;
-				static R get(placeholder_with_F<N, R, void>& t, V&& v)
+				static R get(placeholder_with_F<N, R, void>& , V&& v)
 				{	return static_cast<R>(std::forward<V>(v));	}
 			};
 	};
+
 	//with default value    デフォルト値を与えられた
-	template <int N, typename T>
+	template <size_t N, typename T>
 	struct parameter_evaluate<placeholder_with_F<N, void, T>>	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
 			struct eval	{			//if argument assigned    実引数あり
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void, T>& t, V&& v)
+				static V&& get(placeholder_with_F<N, void, T>& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
 			struct eval<V, nil>	{	//without argument    実引数なし → デフォルト値
 				typedef T&	type;
-				static T& get(placeholder_with_F<N, void, T>& t, V&& v)
+				static T& get(placeholder_with_F<N, void, T>& t, V&& )
 				{	return t.get();	}
 			};
 	};
+
 	//basic    基本
-	template <int N>
+	template <size_t N>
 	struct parameter_evaluate<placeholder_with_F<N, void, void>>	{
 		template <typename V>
 			struct eval	{
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void, void>& t, V&& v)
+				static V&& get(placeholder_with_F<N, void, void>& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 	};
@@ -198,7 +229,7 @@ namespace detail	{
 		typedef param_buf<P> base;
 		typedef P param_t;
 		typedef typename remove_ref_cv<P>::type		p_h;
-		static const int placeholder = std::is_placeholder<p_h>::value;
+		static const size_t placeholder = std::is_placeholder<p_h>::value;
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
 		ParamOf(ParamOf<P>&& p) : base(std::forward<base>(p))	{	}
 		ParamOf(const ParamOf<P>& p) : base(p)	{	}
@@ -210,7 +241,7 @@ namespace detail	{
 		typedef typename std::tuple_element<N-1, Params>::type			type_a;
 		typedef typename parameter_evaluate<ph>::template eval<type_a>	vtype;
 	public:
-		typedef typename vtype::type									type;
+		typedef typename vtype::type				type;
 		static type get(const P0& p, Params&& params)
 		{
 			return vtype::get(p.get(), std::get<N-1>(std::forward<Params>(params)));
@@ -219,8 +250,8 @@ namespace detail	{
 
 	template <typename P0, typename Params>
 	struct type_shift_1<P0, Params, 0, true>	{
-		typedef typename P0::param_t&		type;	//ここ
-		static type get(const P0& p, Params&& params)
+		typedef typename P0::param_t&				type;	//ここ
+		static type get(const P0& p, Params&& )
 		{
 			return p.get();
 		}
@@ -231,8 +262,8 @@ namespace detail	{
 		typedef typename remove_ref_cv<typename P0::param_t>::type		ph;
 		typedef typename parameter_evaluate<ph>::template eval<nil>		vtype;
 	public:
-		typedef typename vtype::type									type;
-		static type get(const P0& p, Params&& params)
+		typedef typename vtype::type				type;
+		static type get(const P0& p, Params&& )
 		{
 			return vtype::get(p.get(), nil());
 		}
@@ -241,7 +272,7 @@ namespace detail	{
 	template <size_t N, typename Params1, typename Params2>
 	class get_and_convert_result	{
 		typedef typename std::tuple_element<N, Params1>::type		P0;
-		static const int	placeholder	= P0::placeholder;
+		static const size_t	placeholder	= P0::placeholder;
 		static const bool small = (placeholder <= std::tuple_size<Params2>::value);
 		typedef type_shift_1<P0, Params2, placeholder, small>	alt_type;
 	public:
@@ -262,10 +293,11 @@ namespace detail	{
 
 	//=================================================================================================
 	template<typename TPL>
-	class invokeType	{
-		template<int N>
+	class invokeType	{		//	SFINAE
+		static const size_t ParamSize = tuple_limit<TPL>::value;
+		template<size_t N>
 			static auto get()->typename std::tuple_element<N, TPL>::type;
-		template<int N>
+		template<size_t N>
 			static auto getp()->typename raw_ptr_type<typename std::tuple_element<N, TPL>::type>::type;
 		//
 		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
@@ -275,9 +307,9 @@ namespace detail	{
 							T1&&					t1	,
 							T1P&&					t1p	,
 							decltype(std::forward<T0>(t0)(get<indice1>()...), 1) = 0	)
-			->cr_pair<	fnc_c	,
+			->sig_type<	fnc_c	,
 						decltype(std::forward<T0>(t0)(get<indice1>()...))	,
-						1		>;
+						ParamSize - 1	>;
 		//
 		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
 		static auto test(	index_tuple<indice1...>		,
@@ -286,9 +318,9 @@ namespace detail	{
 							T1&&					t1	,
 							T1P&&					t1p	,
 							decltype((std::forward<T1>(t1).*t0)(get<indice2>()...), 1) = 0	)
-			->cr_pair<	memF_c	,
+			->sig_type<	memF_c	,
 						decltype((std::forward<T1>(t1).*t0)(get<indice2>()...))	,
-						2		>;
+						ParamSize - 2	>;
 		//
 		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
 		static auto test(	index_tuple<indice1...>		,
@@ -297,9 +329,9 @@ namespace detail	{
 							T1&&					t1	,
 							T1P&&					t1p	,
 							decltype((std::forward<T1P>(t1p)->*t0)(get<indice2>()...), 1) = 0	)
-			->cr_pair<	memF_c*		,
+			->sig_type<	memF_c*		,
 						decltype((std::forward<T1P>(t1p)->*t0)(get<indice2>()...))	,
-						2			>;
+						ParamSize - 2	>;
 		//
 		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
 		static auto test(	index_tuple<indice1...>		,
@@ -308,9 +340,9 @@ namespace detail	{
 							T1&&					t1	,
 							T1P&&					t1p	,
 							decltype(std::forward<T1>(t1).*t0, 1) = 0	)
-			->cr_pair<	mem_c	,
+			->sig_type<	mem_c	,
 						decltype(std::forward<T1>(t1).*t0)	,
-						2		>;
+						ParamSize - 2	>;
 		//
 		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
 		static auto test(	index_tuple<indice1...>		,
@@ -319,28 +351,26 @@ namespace detail	{
 							T1&&					t1	,
 							T1P&&					t1p	,
 							decltype(std::forward<T1P>(t1p)->*t0, 1) = 0	)
-			->cr_pair<	mem_c*	,
+			->sig_type<	mem_c*	,
 						decltype(std::forward<T1P>(t1p)->*t0)	,
-						2		>;
+						ParamSize - 2	>;
 		//
-		static const size_t ParamSize = tuple_limit<TPL>::value;
 		static typename index_range<1, ParamSize>::type		index_tuple_1();
 		static typename index_range<2, ParamSize>::type		index_tuple_2();
 		typedef decltype(test(	index_tuple_1()		,
 								index_tuple_2()		,
 								get<0>()			,
 								get<1>()			,
-								getp<1>()			)	)	cr_type;
+								getp<1>()			)	)	sig_t;
 	public:
-		typedef typename cr_type::call_type									call_type;
-		typedef typename cr_type::result_type								result_type;
-		typedef typename index_range<0, ParamSize - cr_type::value>::type	actual_indice;
+		typedef typename sig_t::call_type						call_type;
+		typedef typename sig_t::result_type						result_type;
+		typedef typename index_range<0, sig_t::value>::type		actual_indice;
 	};
 
 	//************************************************************************************************
 	// execute with parameters
-	template <typename R, typename T, typename A> struct executer	{
-	};
+	template <typename R, typename T, typename A> struct executer;
 
 	//member
 	template <typename R, size_t... indice>
@@ -349,12 +379,14 @@ namespace detail	{
 		R exec(M mem, Obj&& obj) const
 		{	return (std::forward<Obj>(obj)).*mem;	}
 	};
+	//----
 	template <typename R, size_t... indice>
 	struct executer<R, mem_c*, index_tuple<indice...>>		{
 		template <typename M, typename pObj>
 		R exec(M mem, pObj&& pobj) const
 		{	return (*std::forward<pObj>(pobj)).*mem;	}
 	};
+
 	//member function
 	template <typename R, size_t... indice>
 	struct executer<R, memF_c, index_tuple<indice...>>	{
@@ -365,6 +397,7 @@ namespace detail	{
 			return ((std::forward<Obj>(obj)).*mem)(std::get<indice>(vt)...);
 		}
 	};
+	//----
 	template <typename R, size_t... indice>
 	struct executer<R, memF_c*, index_tuple<indice...>>	{
 		template <typename M, typename pObj, typename... Params>
@@ -374,6 +407,7 @@ namespace detail	{
 			return ((*std::forward<pObj>(pobj)).*mem)(std::get<indice>(vt)...);
 		}
 	};
+
 	//functor
 	template <typename R, size_t... indice>
 	struct executer<R, fnc_c, index_tuple<indice...>>	{
@@ -389,13 +423,14 @@ namespace detail	{
 	//main class    本体 ====================================================================
 	template <typename... Vars>
 	class	BindOf	{
-		static const int	N =  sizeof...(Vars);
+		static const size_t	N =  sizeof...(Vars);
 		typedef typename index_range<0, N>::type	index_tuple_type;
 		typedef std::tuple<ParamOf<Vars>...>		Params1;
 		Params1										params1;
+		BindOf& operator =(const BindOf&);
 		//-----------------------------------------------
-		template<typename Params2T, typename D>
-		struct invoke_type_i;
+		template<typename Params2T, typename D>		struct invoke_type_i;
+		//------------
 		template<typename Params2T, size_t... indice>
 		struct invoke_type_i<Params2T, index_tuple<indice...>>	{
 			static const Params1&	get1();
@@ -411,7 +446,7 @@ namespace detail	{
 		};
 		//
 		template<typename Params2T, size_t... indice>
-		auto call_imple(Params2T&& params2, index_tuple<indice...> dummy) const
+		auto call_imple(Params2T&& params2, index_tuple<indice...> ) const
 			->typename invoke_type_i<Params2T, index_tuple<indice...>>::result_type
 		{
 			typename invoke_type_i<Params2T, index_tuple<indice...>>::Executer_t	Executer;
@@ -432,77 +467,87 @@ namespace detail	{
 							);
 		}
 	};
+
+	//*******************************************************************
+	template <typename T>
+	auto granulate(T&& t)->std::tuple<T&&>
+	{
+		return std::forward_as_tuple(std::forward<T>(t));
+	}
+
+	template <size_t... indice>
+	auto granulate(index_tuple<indice...>&& )
+		-> std::tuple<placeholder_with_F<indice, void, void>...>
+	{
+		return std::tuple<placeholder_with_F<indice, void, void>...>();
+	};
+	
+	template <typename... T>
+	auto untie_vars(T&&... t)->decltype(std::tuple_cat(granulate(std::forward<T>(t))...))
+	{
+		return std::tuple_cat(granulate(std::forward<T>(t))...);
+	}
+	//-------------------------------------------------
+	template <typename... Vars, size_t... indice>
+	auto rbind_imple2(std::tuple<Vars...>&& vars, index_tuple<indice...> )->BindOf<Vars...>
+	{
+		typedef BindOf<Vars...> B;
+		return B(std::get<indice>(std::forward<std::tuple<Vars...>>(vars))...);
+	}
+
+	template <typename... Vars>
+	auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<Vars...>
+	{
+		typedef typename index_range<0, sizeof...(Vars)>::type	index;
+		return rbind_imple2(std::forward<std::tuple<Vars...>>(vars), index());
+	}
+
 } //namespace my::detail
 } //namespace my
 
 //***********************************************************************************************
 namespace std {
-	template <int N, typename F, typename R>
+	template <size_t N, typename F, typename R>
 		struct is_placeholder<my::detail::placeholder_with_F<N, R, F>>	{
-			static const int value = N;
+			static const size_t value = N;
 		};
 /*#if 0	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
 	template <> struct is_placeholder<boost::arg<1>> : integral_constant<int, 1> { };
-	template <> struct is_placeholder<boost::arg<2>> : integral_constant<int, 2> { };
-	template <> struct is_placeholder<boost::arg<3>> : integral_constant<int, 3> { };
-	template <> struct is_placeholder<boost::arg<4>> : integral_constant<int, 4> { };
-	template <> struct is_placeholder<boost::arg<5>> : integral_constant<int, 5> { };
-	template <> struct is_placeholder<boost::arg<6>> : integral_constant<int, 6> { };
-	template <> struct is_placeholder<boost::arg<7>> : integral_constant<int, 7> { };
-	template <> struct is_placeholder<boost::arg<8>> : integral_constant<int, 8> { };
-	template <> struct is_placeholder<boost::arg<9>> : integral_constant<int, 9> { };
+	...
 #endif*/
 }	//namespace std
 
 //***********************************************************************************************
 namespace my	{
-	namespace detail	{
-	//placeholders
-	template <int N>
-		struct placeholders_deploy	{
-			static placeholder_with_F<N, void, void> static_N;
-		};
-		template <int N>	//static member
-		placeholder_with_F<N, void, void> placeholders_deploy<N>::static_N =
-			placeholder_with_F<N, void, void>();
-	}	//namespace detail
-
-
-	//pre-defined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
+	//predefined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
 		namespace {
-			detail::placeholder_with_F< 1, void, void>&  _1st = detail::placeholders_deploy< 1>::static_N;
-			detail::placeholder_with_F< 2, void, void>&  _2nd = detail::placeholders_deploy< 2>::static_N;
-			detail::placeholder_with_F< 3, void, void>&  _3rd = detail::placeholders_deploy< 3>::static_N;
-			detail::placeholder_with_F< 4, void, void>&  _4th = detail::placeholders_deploy< 4>::static_N;
-			detail::placeholder_with_F< 5, void, void>&  _5th = detail::placeholders_deploy< 5>::static_N;
-			detail::placeholder_with_F< 6, void, void>&  _6th = detail::placeholders_deploy< 6>::static_N;
-			detail::placeholder_with_F< 7, void, void>&  _7th = detail::placeholders_deploy< 7>::static_N;
-			detail::placeholder_with_F< 8, void, void>&  _8th = detail::placeholders_deploy< 8>::static_N;
-			detail::placeholder_with_F< 9, void, void>&  _9th = detail::placeholders_deploy< 9>::static_N;
-			detail::placeholder_with_F<10, void, void>& _10th = detail::placeholders_deploy<10>::static_N;
-			detail::placeholder_with_F<11, void, void>& _11th = detail::placeholders_deploy<11>::static_N;
-			detail::placeholder_with_F<12, void, void>& _12th = detail::placeholders_deploy<12>::static_N;
-			detail::placeholder_with_F<13, void, void>& _13th = detail::placeholders_deploy<13>::static_N;
-			detail::placeholder_with_F<14, void, void>& _14th = detail::placeholders_deploy<14>::static_N;
-			detail::placeholder_with_F<15, void, void>& _15th = detail::placeholders_deploy<15>::static_N;
-			detail::placeholder_with_F<16, void, void>& _16th = detail::placeholders_deploy<16>::static_N;
-			detail::placeholder_with_F<17, void, void>& _17th = detail::placeholders_deploy<17>::static_N;
-			detail::placeholder_with_F<18, void, void>& _18th = detail::placeholders_deploy<18>::static_N;
-			detail::placeholder_with_F<19, void, void>& _19th = detail::placeholders_deploy<19>::static_N;
-			detail::placeholder_with_F<20, void, void>& _20th = detail::placeholders_deploy<20>::static_N;
-			detail::placeholder_with_F<21, void, void>& _21th = detail::placeholders_deploy<21>::static_N;
+			detail::placeholder_with_F< 1, void, void>  _1st;
+			detail::placeholder_with_F< 2, void, void>  _2nd;
+			detail::placeholder_with_F< 3, void, void>  _3rd;
+			detail::placeholder_with_F< 4, void, void>  _4th;
+			detail::placeholder_with_F< 5, void, void>  _5th;
+			detail::placeholder_with_F< 6, void, void>  _6th;
+			detail::placeholder_with_F< 7, void, void>  _7th;
+			detail::placeholder_with_F< 8, void, void>  _8th;
+			detail::placeholder_with_F< 9, void, void>  _9th;
+			detail::placeholder_with_F<10, void, void> _10th;
+			detail::placeholder_with_F<11, void, void> _11th;
+			detail::placeholder_with_F<12, void, void> _12th;
+			detail::placeholder_with_F<13, void, void> _13th;
+			detail::placeholder_with_F<14, void, void> _14th;
+			detail::placeholder_with_F<15, void, void> _15th;
+			//   ...
 		}
 	}	// my::placeholders
-
-
 
 	//************************************************************************
 	//user interfade / rbind functions       ユーザが使う rbind関数
 	template <typename... Vars>
-	detail::BindOf<Vars...> rbind(Vars&&... vars)
+	auto rbind(Vars&&... vars)
+		->decltype(detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...)))
 	{
-		return detail::BindOf<Vars...>(std::forward<Vars>(vars)...);
+		return detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...));
 	}
 
 } //namespace my
