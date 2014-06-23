@@ -22,6 +22,11 @@ int main(int argc, char **argv)
 	std::cout << "---- basic use" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	std::cout << std::endl;
+	auto b1_1 = my::rbind(f, range(_1st, _3rd));
+	result = b1_1(a, b, c);
+	std::cout << "---- basic use(placeholders range)" << std::endl;
+	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
+	std::cout << std::endl;
 	//----------------------------------------------------------------------------------
 	a = 2014, b = 2, c = 10;
 	//preset default value     デフォルト値の設定
@@ -37,7 +42,7 @@ int main(int argc, char **argv)
 	//----------------------------------------------------------------------------------
 	a = 2014, b = 4, c = 30;
 	//optional argument     引数省略
-	auto b3 = my::rbind(_1, 2014, _2, !_3rd);
+	auto b3 = my::rbind(_1st, 2014, _2nd, _3rd);
 	result = b3(Func(), b);
 	std::cout << "---- use default value of original functor for c(=1)" << std::endl;
 	std::cout << "b = " << b << ", c = " << c << ", result = " << result << std::endl;
