@@ -15,7 +15,7 @@ namespace detail	{
 
 	template <size_t first, size_t last, typename result = index_tuple<>, bool flag = (first >= last)>
 	struct index_range
-		{	using type = result;	};
+		{	typedef result type;	};
 
 	template <size_t first, size_t last, size_t... indice>
 		struct	index_range<first, last, index_tuple<indice...>, false> :
@@ -24,7 +24,7 @@ namespace detail	{
 	//std::remove_reference && std::remove_cv
 	template<typename T>
 	struct remove_ref_cv	{
-		using type = typename std::remove_reference<typename std::remove_cv<T>::type>::type;
+		typedef typename std::remove_reference<typename std::remove_cv<T>::type>::type	type;
 	};
 
 	// type compair without const/volatile and reference   cv属性と参照属性を外して型の同一性を比較
@@ -62,8 +62,8 @@ namespace detail	{
 	//tuple<type of invoke, return type, sizeof... parameters>    呼び出しの型
 	template <typename C, typename R, size_t N>
 	struct sig_type		{
-		using call_type		= C;
-		using result_type	= R;
+		typedef C	call_type;
+		typedef R	result_type;
 		static const size_t value = N;
 	};
 	//==================================================================
@@ -72,7 +72,7 @@ namespace detail	{
 	template <typename T>
 	struct param_buf	{
 		mutable T		val;
-		using type	=	T;
+		typedef T		type;
 		param_buf(T&& t) : val(std::forward<T>(t))	{	}
 		T& get() const		{	return val;	}
 	};
@@ -80,7 +80,7 @@ namespace detail	{
 	template <typename T>
 	struct param_buf<T&>	{
 		T*				pval;
-		using type	=	T&;
+		typedef T&		type;
 		param_buf(T& t) : pval(&t)					{	}
 		T& get() const		{ return *pval; }
 	};
@@ -88,7 +88,7 @@ namespace detail	{
 	template <typename T>
 	struct param_buf<T&&>	{
 		mutable T		val;
-		using type	=	T;
+		typedef T		type;
 		param_buf(T&& t) : val(std::forward<T>(t))	{	}
 		T& get() const		{	return val;	}
 	};
@@ -143,7 +143,7 @@ namespace detail	{
 	struct parameter_evaluate	{
 		template <typename V>
 			struct eval	{
-				using type	=	V;
+				typedef V	type;
 				static V&& get(T& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
@@ -154,7 +154,7 @@ namespace detail	{
 	struct parameter_evaluate<placeholder_with_F<N, R, F>>	{
 		template <typename V>
 			struct eval	{
-				using type	=	R;
+				typedef R	type;
 				static R get(placeholder_with_F<N, R, F>& t, V&& v)
 				{	return t.eval(std::forward<V>(v));	}
 			};
@@ -165,7 +165,7 @@ namespace detail	{
 	struct parameter_evaluate<placeholder_with_F<N, R, void>>	{
 		template <typename V>
 			struct eval	{
-				using type	=	R;
+				typedef R	type;
 				static R get(placeholder_with_F<N, R, void>& , V&& v)
 				{	return static_cast<R>(std::forward<V>(v));	}
 			};
@@ -176,13 +176,13 @@ namespace detail	{
 	struct parameter_evaluate<placeholder_with_F<N, void, T>>	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
 			struct eval	{			//if argument assigned    実引数あり
-				using type	=	V;
+				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, T>& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
 			struct eval<V, nil>	{	//without argument    実引数なし → デフォルト値
-				using type	=	T&;
+				typedef T&	type;
 				static T& get(placeholder_with_F<N, void, T>& t, V&& )
 				{	return t.get();	}
 			};
@@ -193,7 +193,7 @@ namespace detail	{
 	struct parameter_evaluate<placeholder_with_F<N, void, void>>	{
 		template <typename V>
 			struct eval	{
-				using type	=	V;
+				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, void>& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
@@ -207,31 +207,31 @@ namespace detail	{
 		template <typename U>
 		static std::true_type test1(U&& u, decltype(*u, 0) = 0);
 		static std::false_type	test1(...);
-		using T1		= decltype(test1(getT()));
-		using psp_type	= typename std::conditional<T1::value , T, nil*>::type; 
+		using T1       = decltype(test1(getT()));
+		using psp_type = typename std::conditional<T1::value , T, nil*>::type; 
 		static psp_type getPSP();
 	public:
-		using type = decltype(&*getPSP());		//T:int=>nil*, int*=>int*, s_ptr<int>=>int*
+		typedef decltype(&*getPSP())	type;		//T:int=>nil*, int*=>int*, s_ptr<int>=>int*
 	};
 
 	//************************************************************************************************
 	//arguments    パラメータ
 	template <typename P>
 	struct ParamOf : param_buf<P>	{
-		using base		= param_buf<P>;
-		using param_t	= P;
-		using p_h		= typename remove_ref_cv<P>::type;
+		using base = param_buf<P>;
+		using p_h  = typename remove_ref_cv<P>::type;
+		typedef P	param_t;
 		static const size_t placeholder = std::is_placeholder<p_h>::value;
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
 	};
 	//----------------------------------------------------------------------------
 	template <typename P0, typename Params, size_t N, bool B>
 	class type_alternative	{
-		using ph		= typename remove_ref_cv<typename P0::param_t>::type;
-		using type_a	= typename std::tuple_element<N-1, Params>::type;
-		using vtype		= typename parameter_evaluate<ph>::template eval<type_a>;
+		using ph     = typename remove_ref_cv<typename P0::param_t>::type;
+		using type_a = typename std::tuple_element<N-1, Params>::type;
+		using vtype  = typename parameter_evaluate<ph>::template eval<type_a>;
 	public:
-		using type		= typename vtype::type;
+		typedef typename vtype::type			type;
 		static type get(const P0& p, Params&& params)
 		{
 			return vtype::get(p.get(), std::get<N-1>(std::forward<Params>(params)));
@@ -240,7 +240,7 @@ namespace detail	{
 
 	template <typename P0, typename Params>
 	struct type_alternative<P0, Params, 0, true>	{
-		using type	= typename P0::param_t&;	//ここ
+		typedef typename P0::param_t&			type;	//ここ
 		static type get(const P0& p, Params&& )
 		{
 			return p.get();
@@ -249,10 +249,10 @@ namespace detail	{
 
 	template <typename P0, typename Params, size_t N>
 	class type_alternative<P0, Params, N, false>		{
-		using ph	= typename remove_ref_cv<typename P0::param_t>::type;
-		using vtype	= typename parameter_evaluate<ph>::template eval<nil>;
+		using ph    = typename remove_ref_cv<typename P0::param_t>::type;
+		using vtype = typename parameter_evaluate<ph>::template eval<nil>;
 	public:
-		using type	= typename vtype::type;
+		typedef typename vtype::type			type;
 		static type get(const P0& p, Params&& )
 		{
 			return vtype::get(p.get(), nil());
@@ -261,12 +261,12 @@ namespace detail	{
 	//----------------------------------------------------------------------------
 	template <size_t N, typename Params1, typename Params2>
 	class alternative_result	{
-		using P0		= typename std::tuple_element<N, Params1>::type;
+		using P0 = typename std::tuple_element<N, Params1>::type;
 		static const size_t	placeholder	= P0::placeholder;
 		static const bool small = (placeholder <= std::tuple_size<Params2>::value);
-		using alt_type	= type_alternative<P0, Params2, placeholder, small>;
+		using alt_type = type_alternative<P0, Params2, placeholder, small>;
 	public:
-		using result_type	= typename alt_type::type;
+		typedef typename alt_type::type		result_type;
 		static result_type get(const Params1& params1, Params2&& params2)
 		{
 			return alt_type::get(std::get<N>(params1), std::forward<Params2>(params2));
@@ -277,7 +277,7 @@ namespace detail	{
 	auto get_and_convert(const Params1& params1, Params2&& params2)
 		->typename alternative_result<N, Params1, Params2>::result_type
 	{
-		using convert_result = alternative_result<N, Params1, Params2>;
+		using convert_result = alternative_result<N, Params1, Params2>		;
 		return convert_result::get(params1, std::forward<Params2>(params2));
 	}
 
@@ -351,11 +351,11 @@ namespace detail	{
 										index_tuple_2()		,
 										get<0>()			,
 										get<1>()			,
-										getp<1>()			)	);
+										getp<1>()			)	)	;
 	public:
-		using call_type		= typename sig_t::call_type;
-		using result_type	= typename sig_t::result_type;
-		using actual_indice	= typename index_range<0, sig_t::value>::type;
+		typedef typename sig_t::call_type						call_type;
+		typedef typename sig_t::result_type						result_type;
+		typedef typename index_range<0, sig_t::value>::type		actual_indice;
 	};
 
 	//************************************************************************************************
@@ -414,8 +414,8 @@ namespace detail	{
 	template <typename... Vars>
 	class	BindOf	{
 		static const size_t	N =  sizeof...(Vars);
-		using index_tuple_type	= typename index_range<0, N>::type;
-		using Params1			= std::tuple<ParamOf<Vars>...>;
+		using index_tuple_type = typename index_range<0, N>::type;
+		using Params1 = std::tuple<ParamOf<Vars>...>;
 		Params1										params1;
 		//-----------------------------------------------
 		template<typename Params2T, typename D>		struct invoke_type_i;
@@ -425,13 +425,13 @@ namespace detail	{
 			static const Params1&	get1();
 			static Params2T			get2();
 			using ParamTuple = decltype(std::forward_as_tuple(
-										my::detail::template get_and_convert<indice>(get1(), get2())...)
+									my::detail::template get_and_convert<indice>(get1(), get2())...)
 										);
-			using invoke_type	= typename my::detail::invokeType<ParamTuple>;
-			using actual_indice	= typename invoke_type::actual_indice;
-			using call_type		= typename invoke_type::call_type;
-			using result_type	= typename invoke_type::result_type;
-			using Executer_t	= executer<result_type, call_type, actual_indice>;
+			using invoke_type   = typename my::detail::invokeType<ParamTuple>;
+			using actual_indice = typename invoke_type::actual_indice;
+			using call_type     = typename invoke_type::call_type;
+			using result_type   = typename invoke_type::result_type;
+			using Executer_t    = executer<result_type, call_type, actual_indice>;
 		};
 		//
 		template<typename Params2T, size_t... indice>
