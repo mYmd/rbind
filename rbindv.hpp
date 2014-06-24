@@ -128,10 +128,19 @@ namespace detail	{
 			{ return placeholder_with_F<N, R, void>(); }
 	};
 
+	template <size_t N>
+	using plhdr_t = placeholder_with_F<N, void, void>;
+
+	//until(_9th) => [_1st, _2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
+	template <size_t N>
+	auto until(const plhdr_t<N>& ) ->typename index_range<1, N+1>::type
+	{
+		return typename index_range<1, N+1>::type{};
+	}
+
 	//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
 	template <size_t M, size_t N>
-	auto range(placeholder_with_F<M, void, void> , placeholder_with_F<N, void, void> )
-		->typename index_range<M, N+1>::type
+	auto range(const plhdr_t<M>& , const plhdr_t<N>& ) ->typename index_range<M, N+1>::type
 	{
 		return typename index_range<M, N+1>::type{};
 	}
@@ -531,8 +540,7 @@ namespace my	{
 
 		// Alias for placeholder
 		template <size_t N>
-		using plhdr_t = detail::placeholder_with_F<N+0, void, void>;
-				//  +0 is workaround for visualc++2013
+		using plhdr_t = detail::plhdr_t<N>;
 
 	}	// my::placeholders
 
