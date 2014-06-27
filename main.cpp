@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 	std::cout << "---- basic use" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	std::cout << std::endl;
-	auto b1_1 = my::rbind(f, range(_1st, _3rd));
+	auto b1_1 = my::rbind(f, until(_3rd));
 	result = b1_1(a, b, c);
 	std::cout << "---- basic use(placeholders range)" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
