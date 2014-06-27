@@ -13,8 +13,8 @@ rbind は std::bind を参照ベースにしたものです。
   you can set default values for specital placeholders _1st, _2nd, ...  
   専用プレースホルダ _1st, _2nd, ... にはデフォルト引数を設定できる
   
-  You can create range of placeholder
-  プレースホルダを範囲で指定できる
+  You can create range of placeholder  
+  プレースホルダを範囲で指定できる  
     range(_2nd, _5th)      --->    _2nd, _3rd, _4th, _5th  
     until(_4th)      --->    _1st, _2nd, _3rd, _4th  
 
