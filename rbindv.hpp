@@ -3,7 +3,6 @@
 
 #pragma once
 #include <functional>
-#include <tuple>
 
 namespace my	{
 namespace detail	{
@@ -133,7 +132,7 @@ namespace detail	{
 
 	//until(_9th) => [_1st, _2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
 	// default parameter is a workaround for visual c++ (2013)
-	template <size_t N, size_t D = 1UL>
+	template <size_t N, size_t D = 1>
 	auto until(const plhdr_t<N>& , plhdr_t<D> = plhdr_t<D>{} ) ->typename index_range<1, N+1>::type
 	{
 		return typename index_range<D, N+1>::type{};
@@ -517,21 +516,21 @@ namespace my	{
 	//predefined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
 		namespace {
-			detail::placeholder_with_F< 1UL, void, void>  _1st;
-			detail::placeholder_with_F< 2UL, void, void>  _2nd;
-			detail::placeholder_with_F< 3UL, void, void>  _3rd;
-			detail::placeholder_with_F< 4UL, void, void>  _4th;
-			detail::placeholder_with_F< 5UL, void, void>  _5th;
-			detail::placeholder_with_F< 6UL, void, void>  _6th;
-			detail::placeholder_with_F< 7UL, void, void>  _7th;
-			detail::placeholder_with_F< 8UL, void, void>  _8th;
-			detail::placeholder_with_F< 9UL, void, void>  _9th;
-			detail::placeholder_with_F<10UL, void, void> _10th;
-			detail::placeholder_with_F<11UL, void, void> _11th;
-			detail::placeholder_with_F<12UL, void, void> _12th;
-			detail::placeholder_with_F<13UL, void, void> _13th;
-			detail::placeholder_with_F<14UL, void, void> _14th;
-			detail::placeholder_with_F<15UL, void, void> _15th;
+			detail::placeholder_with_F< 1, void, void>  _1st;
+			detail::placeholder_with_F< 2, void, void>  _2nd;
+			detail::placeholder_with_F< 3, void, void>  _3rd;
+			detail::placeholder_with_F< 4, void, void>  _4th;
+			detail::placeholder_with_F< 5, void, void>  _5th;
+			detail::placeholder_with_F< 6, void, void>  _6th;
+			detail::placeholder_with_F< 7, void, void>  _7th;
+			detail::placeholder_with_F< 8, void, void>  _8th;
+			detail::placeholder_with_F< 9, void, void>  _9th;
+			detail::placeholder_with_F<10, void, void> _10th;
+			detail::placeholder_with_F<11, void, void> _11th;
+			detail::placeholder_with_F<12, void, void> _12th;
+			detail::placeholder_with_F<13, void, void> _13th;
+			detail::placeholder_with_F<14, void, void> _14th;
+			detail::placeholder_with_F<15, void, void> _15th;
 			//   ...
 		}
 
