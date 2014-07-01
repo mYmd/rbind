@@ -8,18 +8,55 @@ namespace my	{
 namespace detail	{
 
 	struct nil	{	};
-
-	template<size_t... indice>
+	
+	//============================================================================
+	template <size_t... indices>
 	struct index_tuple	{	};
 
-	template <size_t first, size_t last, typename result = index_tuple<>, bool flag = (first >= last)>
-	struct index_range
-		{	typedef result type;	};
+	//------------------------------------------------
+	template <typename T1, typename T2>
+	struct index_cat;
 
-	template <size_t first, size_t last, size_t... indice>
-		struct	index_range<first, last, index_tuple<indice...>, false> :
-					index_range<first + 1, last, index_tuple<indice..., first>>		{	};
+	template <size_t... indice1, size_t... indice2>
+	struct index_cat<index_tuple<indice1...>, index_tuple<indice2...>>
+	{  using type = index_tuple<indice1..., indice2...>;   };
+	//------------------------------------------------------------------------
+	template <size_t first, size_t len>
+	struct index_range_i		{
+		using type = typename index_cat<typename index_range_i<first, len/2>::type	,
+								           typename index_range_i<first+len/2, len-len/2>::type
+			                          >::type;
+	};
+	template <size_t first> struct index_range_i<first, 0>	{ using type = index_tuple<>; };
+	template <size_t first> struct index_range_i<first, 1>	{ using type = index_tuple<first>; };
+	template <size_t first> struct index_range_i<first, 2>	{ using type = index_tuple<first, first+1>; };
 
+	//**************************************************************
+    template <size_t first, size_t last>
+	struct index_range	{
+		static const size_t len = (first < last)?	last - first	:	0;
+        typedef typename index_range_i<first, len>::type	type;
+    };
+
+	//**************************************************************
+	//  access to N_th position of index_tuple
+    template <typename T> struct at_imple;
+	template <size_t... indices>
+	struct at_imple<index_tuple<indices...>> {
+		template <size_t N> struct dummy_t { using type = size_t; };
+		template <typename... Args>
+		static size_t func(typename dummy_t<indices>::type... , size_t arg, Args...)
+			{	return arg;	}
+	};
+
+	//  access to N_th position of index_tuple  =>  at<N>(index_tuple);
+    template <size_t N, size_t... indices>
+    size_t at(index_tuple<indices...> )
+    {
+        return at_imple<typename index_range<0, N>::type>::func(indices...);
+    }
+
+	//=====================================================================================
 	//std::remove_reference && std::remove_cv
 	template<typename T>
 	struct remove_ref_cv	{
@@ -129,21 +166,6 @@ namespace detail	{
 
 	template <size_t N>
 	using plhdr_t = placeholder_with_F<N, void, void>;
-
-	//until(_9th) => [_1st, _2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
-	// default parameter is a workaround for visual c++ (2013)
-	template <size_t N, size_t D = 1>
-	auto until(const plhdr_t<N>& , plhdr_t<D> = plhdr_t<D>{} ) ->typename index_range<1, N+1>::type
-	{
-		return typename index_range<D, N+1>::type{};
-	}
-
-	//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
-	template <size_t M, size_t N>
-	auto range(const plhdr_t<M>& , const plhdr_t<N>& ) ->typename index_range<M, N+1>::type
-	{
-		return typename index_range<M, N+1>::type{};
-	}
 
 	//=======================================================================================
 	//convet from placeholder to argument    placeholderから実引数に変換 ====================
@@ -372,49 +394,49 @@ namespace detail	{
 	template <typename R, typename T, typename A> struct executer;
 
 	//member
-	template <typename R, size_t... indice>
-	struct executer<R, mem_c, index_tuple<indice...>>		{
+	template <typename R, size_t... indices>
+	struct executer<R, mem_c, index_tuple<indices...>>		{
 		template <typename M, typename Obj>
 		R exec(M mem, Obj&& obj) const
 		{	return (std::forward<Obj>(obj)).*mem;	}
 	};
 	//----
-	template <typename R, size_t... indice>
-	struct executer<R, mem_c*, index_tuple<indice...>>		{
+	template <typename R, size_t... indices>
+	struct executer<R, mem_c*, index_tuple<indices...>>		{
 		template <typename M, typename pObj>
 		R exec(M mem, pObj&& pobj) const
 		{	return (*std::forward<pObj>(pobj)).*mem;	}
 	};
 
 	//member function
-	template <typename R, size_t... indice>
-	struct executer<R, memF_c, index_tuple<indice...>>	{
+	template <typename R, size_t... indices>
+	struct executer<R, memF_c, index_tuple<indices...>>	{
 		template <typename M, typename Obj, typename... Params>
 		R exec(M mem, Obj&& obj, Params&&... params) const
 		{
 			auto vt = std::forward_as_tuple(std::forward<Params>(params)...);
-			return ((std::forward<Obj>(obj)).*mem)(std::get<indice>(vt)...);
+			return ((std::forward<Obj>(obj)).*mem)(std::get<indices>(vt)...);
 		}
 	};
 	//----
-	template <typename R, size_t... indice>
-	struct executer<R, memF_c*, index_tuple<indice...>>	{
+	template <typename R, size_t... indices>
+	struct executer<R, memF_c*, index_tuple<indices...>>	{
 		template <typename M, typename pObj, typename... Params>
 		R exec(M mem, pObj&& pobj, Params&&... params) const
 		{
 			auto vt = std::forward_as_tuple(std::forward<Params>(params)...);
-			return ((*std::forward<pObj>(pobj)).*mem)(std::get<indice>(vt)...);
+			return ((*std::forward<pObj>(pobj)).*mem)(std::get<indices>(vt)...);
 		}
 	};
 
 	//functor
-	template <typename R, size_t... indice>
-	struct executer<R, fnc_c, index_tuple<indice...>>	{
+	template <typename R, size_t... indices>
+	struct executer<R, fnc_c, index_tuple<indices...>>	{
 		template <typename F, typename... Params>
 		R exec(F&& f, Params&&... params) const
 		{
 			auto vt = std::forward_as_tuple(std::forward<Params>(params)...);
-			return (std::forward<F>(f))(std::get<indice>(vt)...);
+			return (std::forward<F>(f))(std::get<indices>(vt)...);
 		}
 	};
 
@@ -429,12 +451,12 @@ namespace detail	{
 		//-----------------------------------------------
 		template<typename Params2T, typename D>		struct invoke_type_i;
 		//------------
-		template<typename Params2T, size_t... indice>
-		struct invoke_type_i<Params2T, index_tuple<indice...>>	{
+		template<typename Params2T, size_t... indices>
+		struct invoke_type_i<Params2T, index_tuple<indices...>>	{
 			static const Params1&	get1();
 			static Params2T			get2();
 			using ParamTuple = decltype(std::forward_as_tuple(
-									my::detail::template get_and_convert<indice>(get1(), get2())...)
+									my::detail::template get_and_convert<indices>(get1(), get2())...)
 										);
 			using invoke_type   = typename my::detail::invokeType<ParamTuple>;
 			using actual_indice = typename invoke_type::actual_indice;
@@ -443,21 +465,21 @@ namespace detail	{
 			using Executer_t    = executer<result_type, call_type, actual_indice>;
 		};
 		//
-		template<typename Params2T, size_t... indice>
-		auto call_imple(Params2T&& params2, index_tuple<indice...> ) const
-			->typename invoke_type_i<Params2T, index_tuple<indice...>>::result_type
+		template<typename Params2T, size_t... indices>
+		auto call_imple(Params2T&& params2, index_tuple<indices...> ) const
+			->typename invoke_type_i<Params2T, index_tuple<indices...>>::result_type
 		{
-			typename invoke_type_i<Params2T, index_tuple<indice...>>::Executer_t	Executer;
+			typename invoke_type_i<Params2T, index_tuple<indices...>>::Executer_t	Executer;
 			return 
 				Executer.exec(
-					get_and_convert<indice>(params1, std::forward<Params2T>(params2))...
+					get_and_convert<indices>(params1, std::forward<Params2T>(params2))...
 				);
 		}
 	public:
 		BindOf(Vars&&... vars) : params1(std::forward<Vars>(vars)...)	{	}
-		template <size_t... indice>
-		BindOf(std::tuple<Vars...>&& vars, index_tuple<indice...>) :
-				params1(std::get<indice>(std::forward<std::tuple<Vars...>>(vars))...)	{	}
+		template <size_t... indices>
+		BindOf(std::tuple<Vars...>&& vars, index_tuple<indices...>) :
+				params1(std::get<indices>(std::forward<std::tuple<Vars...>>(vars))...)	{	}
 		//
 		template <typename... Params2>
 		auto operator ()(Params2&&... params2) const
@@ -476,11 +498,11 @@ namespace detail	{
 		return std::forward_as_tuple(std::forward<T>(t));
 	}
 
-	template <size_t... indice>
-	auto granulate(index_tuple<indice...>&& )
-		-> std::tuple<placeholder_with_F<indice, void, void>...>
+	template <size_t... indices>
+	auto granulate(index_tuple<indices...>&& )
+		-> std::tuple<placeholder_with_F<indices, void, void>...>
 	{
-		return std::tuple<placeholder_with_F<indice, void, void>...>();
+		return std::tuple<placeholder_with_F<indices, void, void>...>();
 	};
 	
 	template <typename... T>
@@ -538,6 +560,22 @@ namespace my	{
 		template <size_t N>
 		using plhdr_t = detail::plhdr_t<N>;
 
+		//until(_9th) => [_1st, _2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
+		//this will be converted to tuple of placeholders by granulate function afterward
+		// default parameter is a workaround for visual c++ (2013)
+		template <size_t N, size_t D = 1>
+		auto until(const plhdr_t<N>& , plhdr_t<D> = plhdr_t<D>{} ) ->typename detail::index_range<1, N+1>::type
+		{
+			return typename detail::index_range<D, N+1>::type{};
+		}
+
+		//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
+		//this will be converted to tuple of placeholders by granulate function afterward
+		template <size_t M, size_t N>
+		auto range(const plhdr_t<M>& , const plhdr_t<N>& ) ->typename detail::index_range<M, N+1>::type
+		{
+			return typename detail::index_range<M, N+1>::type{};
+		}
 	}	// my::placeholders
 
 	//************************************************************************
@@ -549,4 +587,17 @@ namespace my	{
 		return detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...));
 	}
 
+	//************************************************************************
+	template <size_t... indices>
+	using index_tuple = detail::index_tuple<indices...>;
+
+    template <size_t first, size_t last>
+	using index_range = detail::index_range<first, last>;
+
+	//  access to N_th position of index_tuple  =>  my::at<N>(index_tuple);
+	template <size_t N, size_t... indices>
+    size_t at(index_tuple<indices...> a)
+    {
+        return detail::at<N>(a);
+    }
 } //namespace my
