@@ -33,10 +33,7 @@ namespace detail	{
 
 	//**************************************************************
     template <size_t first, size_t last>
-	struct index_range	{
-		static const size_t len = (first < last)?	last - first	:	0;
-        typedef typename index_range_i<first, len>::type	type;
-    };
+	using index_range = typename index_range_i<first, (first<last)? last - first: 0>::type;
 
 	//**************************************************************
 	//  access to N_th position of index_tuple
@@ -53,7 +50,7 @@ namespace detail	{
     template <size_t N, size_t... indices>
     size_t at(index_tuple<indices...> )
     {
-        return at_imple<typename index_range<0, N>::type>::func(indices...);
+        return at_imple<index_range<0, N>>::func(indices...);
     }
 
 	//=====================================================================================
@@ -376,17 +373,17 @@ namespace detail	{
 						decltype(std::forward<T1P>(t1p)->*t0)	,
 						ParamSize - 2	>;
 		//
-		static typename index_range<1, ParamSize>::type		index_tuple_1();
-		static typename index_range<2, ParamSize>::type		index_tuple_2();
+		static index_range<1, ParamSize>	index_tuple_1();
+		static index_range<2, ParamSize>	index_tuple_2();
 		using sig_t = decltype(test(	index_tuple_1()		,
 										index_tuple_2()		,
 										get<0>()			,
 										get<1>()			,
 										getp<1>()			)	)	;
 	public:
-		typedef typename sig_t::call_type						call_type;
-		typedef typename sig_t::result_type						result_type;
-		typedef typename index_range<0, sig_t::value>::type		actual_indice;
+		typedef typename sig_t::call_type			call_type;
+		typedef typename sig_t::result_type			result_type;
+		typedef index_range<0, sig_t::value>		actual_indice;
 	};
 
 	//************************************************************************************************
@@ -445,7 +442,6 @@ namespace detail	{
 	template <typename... Vars>
 	class	BindOf	{
 		static const size_t	N =  sizeof...(Vars);
-		using index_tuple_type = typename index_range<0, N>::type;
 		using Params1 = std::tuple<ParamOf<Vars>...>;
 		Params1										params1;
 		//-----------------------------------------------
@@ -483,10 +479,10 @@ namespace detail	{
 		//
 		template <typename... Params2>
 		auto operator ()(Params2&&... params2) const
-			->typename invoke_type_i<std::tuple<Params2...>, index_tuple_type>::result_type
+			->typename invoke_type_i<std::tuple<Params2...>, index_range<0, N>>::result_type
 		{
 			return call_imple(	std::forward_as_tuple(std::forward<Params2>(params2)...),
-								index_tuple_type()
+								index_range<0, N>()
 							);
 		}
 	};
@@ -514,7 +510,7 @@ namespace detail	{
 	template <typename... Vars>
 	auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<Vars...>
 	{
-		using index = typename index_range<0, sizeof...(Vars)>::type;
+		using index = index_range<0, sizeof...(Vars)>;
 		return BindOf<Vars...>(std::forward<std::tuple<Vars...>>(vars), index());
 	}
 
@@ -564,17 +560,17 @@ namespace my	{
 		//this will be converted to tuple of placeholders by granulate function afterward
 		// default parameter is a workaround for visual c++ (2013)
 		template <size_t N, size_t D = 1>
-		auto until(const plhdr_t<N>& , plhdr_t<D> = plhdr_t<D>{} ) ->typename detail::index_range<1, N+1>::type
+		auto until(const plhdr_t<N>& , plhdr_t<D> = plhdr_t<D>{} ) ->detail::index_range<1, N+1>
 		{
-			return typename detail::index_range<D, N+1>::type{};
+			return detail::index_range<D, N+1>{};
 		}
 
 		//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
 		//this will be converted to tuple of placeholders by granulate function afterward
 		template <size_t M, size_t N>
-		auto range(const plhdr_t<M>& , const plhdr_t<N>& ) ->typename detail::index_range<M, N+1>::type
+		auto range(const plhdr_t<M>& , const plhdr_t<N>& ) ->detail::index_range<M, N+1>
 		{
-			return typename detail::index_range<M, N+1>::type{};
+			return detail::index_range<M, N+1>{};
 		}
 	}	// my::placeholders
 
