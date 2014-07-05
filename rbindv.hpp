@@ -72,19 +72,19 @@ namespace detail	{
 	//       0,     1,     2, ....        M+1
 	template<typename Head, typename... Tail>
 	struct tuple_limit	{
-		static const size_t value = is_same_ignoring_cv_ref<Head, nil>::value?
-												0								:
-												1 + tuple_limit<Tail...>::value	;
+		static constexpr size_t value = is_same_ignoring_cv_ref<Head, nil>::value?
+													0								:
+													1 + tuple_limit<Tail...>::value	;
 	};
 	//
 	template<typename Head>
 	struct tuple_limit<Head>	{
-		static const size_t value = is_same_ignoring_cv_ref<Head, nil>::value? 0: 1;
+		static constexpr size_t value = is_same_ignoring_cv_ref<Head, nil>::value? 0: 1;
 	};
 	//
 	template<typename... Params>
 	struct tuple_limit<std::tuple<Params...>>	{
-		static const size_t value = tuple_limit<Params...>::value;
+		static constexpr size_t value = tuple_limit<Params...>::value;
 	};
 	//--------------------------------------------------------------------
 	//type of invoke    呼び出しの型
@@ -100,7 +100,7 @@ namespace detail	{
 	struct sig_type		{
 		typedef C	call_type;
 		typedef R	result_type;
-		static const size_t value = N;
+		static constexpr size_t value = N;
 	};
 	//==================================================================
 
@@ -252,7 +252,7 @@ namespace detail	{
 		using base = param_buf<P>;
 		using p_h  = typename remove_ref_cv<P>::type;
 		typedef P	param_t;
-		static const size_t placeholder = std::is_placeholder<p_h>::value;
+		static constexpr size_t placeholder = std::is_placeholder<p_h>::value;
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
 	};
 	//----------------------------------------------------------------------------
@@ -293,8 +293,8 @@ namespace detail	{
 	template <size_t N, typename Params1, typename Params2>
 	class alternative_result	{
 		using P0 = typename std::tuple_element<N, Params1>::type;
-		static const size_t	placeholder	= P0::placeholder;
-		static const bool small = (placeholder <= std::tuple_size<Params2>::value);
+		static constexpr size_t	placeholder	= P0::placeholder;
+		static constexpr bool small = (placeholder <= std::tuple_size<Params2>::value);
 		using alt_type = type_alternative<P0, Params2, placeholder, small>;
 	public:
 		typedef typename alt_type::type		result_type;
@@ -315,7 +315,7 @@ namespace detail	{
 	//=================================================================================================
 	template<typename TPL>
 	class invokeType	{		//	SFINAE
-		static const size_t ParamSize = tuple_limit<TPL>::value;
+		static constexpr size_t ParamSize = tuple_limit<TPL>::value;
 		template<size_t N>
 			static auto get()->typename std::tuple_element<N, TPL>::type;
 		template<size_t N>
@@ -444,7 +444,7 @@ namespace detail	{
 	//main class    本体 ====================================================================
 	template <typename... Vars>
 	class	BindOf	{
-		static const size_t	N =  sizeof...(Vars);
+		static constexpr size_t	N =  sizeof...(Vars);
 		using Params1 = std::tuple<ParamOf<Vars>...>;
 		Params1										params1;
 		//-----------------------------------------------
@@ -524,7 +524,7 @@ namespace detail	{
 namespace std {
 	template <size_t N, typename F, typename R>
 		struct is_placeholder<my::detail::placeholder_with_F<N, R, F>>	{
-			static const size_t value = N;
+			static constexpr size_t value = N;
 		};
 /*#if 0	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
 	template <> struct is_placeholder<boost::arg<1>> : integral_constant<int, 1> { };
