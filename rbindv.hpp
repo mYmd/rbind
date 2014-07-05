@@ -16,28 +16,40 @@ namespace detail	{
 	};
 
 	//------------------------------------------------
-	template <typename T1, typename T2>
-	struct index_cat;
+	template <typename T1, typename T2>	struct index_cat;
 
-	template <size_t... indice1, size_t... indice2>
-	struct index_cat<index_tuple<indice1...>, index_tuple<indice2...>>
-	{  using type = index_tuple<indice1..., indice2...>;   };
+	template <size_t... indices1, size_t... indices2>
+	struct index_cat<index_tuple<indices1...>, index_tuple<indices2...>>	{
+		using type = index_tuple<indices1..., indices2...>;
+	};
+
+	template <size_t N, typename T>	struct index_shift;
+
+	template <size_t N, size_t... indices>
+	struct index_shift<N, index_tuple<indices...>>	{
+		using type = index_tuple<N + indices...>;
+	};
 	//------------------------------------------------------------------------
 	template <size_t first, size_t len>
 	struct index_range_i		{
-		using type = typename index_cat<typename index_range_i<first, len/2>::type	,
-								           typename index_range_i<first+len/2, len-len/2>::type
-			                          >::type;
+		using type = typename index_shift<first, typename index_range_i<0, len>::type>::type;
 	};
-	template <size_t first> struct index_range_i<first, 0>	{ using type = index_tuple<>; };
-	template <size_t first> struct index_range_i<first, 1>	{ using type = index_tuple<first>; };
-	template <size_t first> struct index_range_i<first, 2>	{ using type = index_tuple<first, first+1>; };
 
-	//**************************************************************
+	template <size_t len>
+	struct index_range_i<0, len>		{
+		using type = typename index_cat<typename index_range_i<0, len/2>::type	,
+								typename index_range_i<len/2, len-len/2>::type
+						>::type;
+	};
+
+	template <> struct index_range_i<0, 0>	{ using type = index_tuple<>; };
+	template <> struct index_range_i<0, 1>	{ using type = index_tuple<0>; };
+	template <> struct index_range_i<0, 2>	{ using type = index_tuple<0, 1>; };
+	//+**************************************************************
     template <size_t first, size_t last>
 	using index_range = typename index_range_i<first, (first<last)? last - first: 0>::type;
 
-	//**************************************************************
+	//+**************************************************************
 	//  access to N_th position of index_tuple
     template <typename T> struct at_imple;
 
@@ -321,42 +333,42 @@ namespace detail	{
 		template<size_t N>
 			static auto getp()->typename raw_ptr_type<typename std::tuple_element<N, TPL>::type>::type;
 		//
-		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indice1...>		,
-							index_tuple<indice2...>		,
+		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
+		static auto test(	index_tuple<indices1...>	,
+							index_tuple<indices2...>	,
 							T0&&					t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype(std::forward<T0>(t0)(get<indice1>()...), 1) = 0	)
+							decltype(std::forward<T0>(t0)(get<indices1>()...), 1) = 0	)
 			->sig_type<	fnc_c	,
-						decltype(std::forward<T0>(t0)(get<indice1>()...))	,
+						decltype(std::forward<T0>(t0)(get<indices1>()...))	,
 						ParamSize - 1	>;
 		//
-		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indice1...>		,
-							index_tuple<indice2...>		,
+		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
+		static auto test(	index_tuple<indices1...>	,
+							index_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype((std::forward<T1>(t1).*t0)(get<indice2>()...), 1) = 0	)
+							decltype((std::forward<T1>(t1).*t0)(get<indices2>()...), 1) = 0	)
 			->sig_type<	memF_c	,
-						decltype((std::forward<T1>(t1).*t0)(get<indice2>()...))	,
+						decltype((std::forward<T1>(t1).*t0)(get<indices2>()...))	,
 						ParamSize - 2	>;
 		//
-		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indice1...>		,
-							index_tuple<indice2...>		,
+		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
+		static auto test(	index_tuple<indices1...>	,
+							index_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype((std::forward<T1P>(t1p)->*t0)(get<indice2>()...), 1) = 0	)
+							decltype((std::forward<T1P>(t1p)->*t0)(get<indices2>()...), 1) = 0	)
 			->sig_type<	memF_c*		,
-						decltype((std::forward<T1P>(t1p)->*t0)(get<indice2>()...))	,
+						decltype((std::forward<T1P>(t1p)->*t0)(get<indices2>()...))	,
 						ParamSize - 2	>;
 		//
-		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indice1...>		,
-							index_tuple<indice2...>		,
+		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
+		static auto test(	index_tuple<indices1...>	,
+							index_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
@@ -365,9 +377,9 @@ namespace detail	{
 						decltype(std::forward<T1>(t1).*t0)	,
 						ParamSize - 2	>;
 		//
-		template<size_t... indice1, size_t... indice2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indice1...>		,
-							index_tuple<indice2...>		,
+		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
+		static auto test(	index_tuple<indices1...>	,
+							index_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
