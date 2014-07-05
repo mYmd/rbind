@@ -11,7 +11,9 @@ namespace detail	{
 	
 	//============================================================================
 	template <size_t... indices>
-	struct index_tuple	{	};
+	struct index_tuple	{
+		static constexpr size_t size()	{	return sizeof...(indices);	}
+	};
 
 	//------------------------------------------------
 	template <typename T1, typename T2>
@@ -38,17 +40,18 @@ namespace detail	{
 	//**************************************************************
 	//  access to N_th position of index_tuple
     template <typename T> struct at_imple;
-	template <size_t... indices>
-	struct at_imple<index_tuple<indices...>> {
+
+	template <size_t... Left>
+	struct at_imple<index_tuple<Left...>> {
 		template <size_t N> struct dummy_t { using type = size_t; };
-		template <typename... Args>
-		static size_t func(typename dummy_t<indices>::type... , size_t arg, Args...)
-			{	return arg;	}
+		template <typename... Right>
+		static constexpr size_t func(typename dummy_t<Left>::type... , size_t here, Right...)
+			{	return here;	}
 	};
 
 	//  access to N_th position of index_tuple  =>  at<N>(index_tuple);
     template <size_t N, size_t... indices>
-    size_t at(index_tuple<indices...> )
+    constexpr size_t at(index_tuple<indices...> )
     {
         return at_imple<index_range<0, N>>::func(indices...);
     }
@@ -558,17 +561,19 @@ namespace my	{
 
 		//until(_9th) => [_1st, _2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
 		//this will be converted to tuple of placeholders by granulate function afterward
-		// default parameter is a workaround for visual c++ (2013)
-		template <size_t N, size_t D = 1>
-		auto until(const plhdr_t<N>& , plhdr_t<D> = plhdr_t<D>{} ) ->detail::index_range<1, N+1>
+		// default parameter T is a workaround for visual c++ 2013 CTP
+		template <size_t N, typename T = void>
+		auto until(const detail::placeholder_with_F<N, T, T>& ) ->detail::index_range<1, N+1>
 		{
-			return detail::index_range<D, N+1>{};
+			return detail::index_range<1, N+1>{};
 		}
 
 		//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
 		//this will be converted to tuple of placeholders by granulate function afterward
-		template <size_t M, size_t N>
-		auto range(const plhdr_t<M>& , const plhdr_t<N>& ) ->detail::index_range<M, N+1>
+		// default parameter T is a workaround for visual c++ 2013 CTP
+		template <size_t M, size_t N, typename T = void>
+		auto range(	const detail::placeholder_with_F<M, T, T>& ,
+					const detail::placeholder_with_F<N, T, T>& ) ->detail::index_range<M, N+1>
 		{
 			return detail::index_range<M, N+1>{};
 		}
