@@ -57,7 +57,7 @@ namespace detail	{
 	struct at_imple<index_tuple<Left...>> {
 		template <size_t N> struct dummy_t { using type = size_t; };
 		template <typename... Right>
-		static constexpr size_t func(typename dummy_t<Left>::type... , size_t here, Right...)
+		static constexpr size_t get(typename dummy_t<Left>::type... , size_t here, Right...)
 			{	return here;	}
 	};
 
@@ -65,7 +65,7 @@ namespace detail	{
     template <size_t N, size_t... indices>
     constexpr size_t at(index_tuple<indices...> )
     {
-        return at_imple<index_range<0, N>>::func(indices...);
+        return at_imple<index_range<0, N>>::get(indices...);
     }
 
 	//=====================================================================================
