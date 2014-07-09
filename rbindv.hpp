@@ -37,8 +37,9 @@ namespace detail	{
 
 	template <size_t len>
 	struct index_range_i<0, len>		{
-		using type = typename index_cat<typename index_range_i<0, len/2>::type	,
-								typename index_range_i<len/2, len-len/2>::type
+		static constexpr size_t h = len/2;
+		using type = typename index_cat<typename index_range_i<0, h>::type	,
+								typename index_range_i<h, len-h>::type
 						>::type;
 	};
 
@@ -51,21 +52,25 @@ namespace detail	{
 
 	//+**************************************************************
 	//  access to N_th position of index_tuple
-    template <typename T> struct at_imple;
+	template <size_t N, size_t V>	struct elem_at	{	};
 
-	template <size_t... Left>
-	struct at_imple<index_tuple<Left...>> {
-		template <size_t N> struct dummy_t { using type = size_t; };
-		template <typename... Right>
-		static constexpr size_t get(typename dummy_t<Left>::type... , size_t here, Right...)
-			{	return here;	}
+	template <typename N, size_t... indices>	struct dummy_b;
+
+	template <size_t... num, size_t... indices>
+	struct dummy_b<index_tuple<num...>, indices...> : elem_at<num, indices>...	{	};
+
+	template <size_t N>
+	struct acceptor	{
+		template <size_t V>
+		static constexpr size_t accept(const elem_at<N, V>&)	{	return V;	}
 	};
 
 	//  access to N_th position of index_tuple  =>  at<N>(index_tuple);
     template <size_t N, size_t... indices>
     constexpr size_t at(index_tuple<indices...> )
     {
-        return at_imple<index_range<0, N>>::get(indices...);
+		using type = dummy_b<index_range<0, sizeof...(indices)>, indices...>;
+		return acceptor<N>::accept(type{});
     }
 
 	//=====================================================================================
