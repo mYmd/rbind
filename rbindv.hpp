@@ -606,16 +606,8 @@ namespace my	{
 	}
 
 	//************************************************************************
-	template <size_t... indices>
-	using index_tuple = detail::index_tuple<indices...>;
+	using detail::index_tuple;
+	using detail::index_range;
+	using detail::at;
 
-    template <size_t first, size_t last>
-	using index_range = detail::index_range<first, last>;
-
-	//  access to N_th position of index_tuple  =>  my::at<N>(index_tuple);
-	template <size_t N, size_t... indices>
-    size_t at(index_tuple<indices...> a)
-    {
-        return detail::at<N>(a);
-    }
 } //namespace my
