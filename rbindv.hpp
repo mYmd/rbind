@@ -66,8 +66,8 @@ namespace detail	{
 	};
 
 	//  access to N_th position of index_tuple  =>  at<N>(index_tuple);
-    template <size_t N, size_t... indices>
-    constexpr size_t at(index_tuple<indices...> )
+    template <size_t N, template <size_t...> class index_tuple_t, size_t... indices>
+    constexpr size_t at(index_tuple_t<indices...> )
     {
 		using type = dummy_b<index_range<0, sizeof...(indices)>, indices...>;
 		return acceptor<N>::accept(type{});
@@ -76,8 +76,11 @@ namespace detail	{
 	//=====================================================================================
 	//std::remove_reference && std::remove_cv
 	template<typename T>
-	struct remove_ref_cv	{
-		typedef typename std::remove_reference<typename std::remove_cv<T>::type>::type	type;
+	class remove_ref_cv	{
+		using type2 = typename std::remove_cv<T>::type;
+		using type1 = typename std::remove_reference<type2>::type;
+	public:
+		typedef typename std::remove_cv<type1>::type	type;
 	};
 
 	// type compair without const/volatile and reference   cv属性と参照属性を外して型の同一性を比較
@@ -87,16 +90,16 @@ namespace detail	{
 	//--------------------------------------------------------------------
 	//	[type0, type1, type2, ..., typeM, nil) ... typeN ,,,
 	//       0,     1,     2, ....        M+1
-	template<typename Head, typename... Tail>
+	template<typename... Tail>
 	struct tuple_limit	{
+		static constexpr size_t value = 0;
+	};
+
+	template<typename Head, typename... Tail>
+	struct tuple_limit<Head, Tail...>	{
 		static constexpr size_t value = is_same_ignoring_cv_ref<Head, nil>::value?
 													0								:
 													1 + tuple_limit<Tail...>::value	;
-	};
-	//
-	template<typename Head>
-	struct tuple_limit<Head>	{
-		static constexpr size_t value = is_same_ignoring_cv_ref<Head, nil>::value? 0: 1;
 	};
 	//
 	template<typename... Params>
