@@ -51,27 +51,46 @@ namespace detail	{
 	using index_range = typename index_range_i<first, (first<last)? last - first: 0>::type;
 
 	//+**************************************************************
-	//  access to N_th position of index_tuple
-	template <size_t N, size_t V>	struct elem_at	{	};
+	//  get N_th index of a sequence of indexs
+	template <size_t , size_t >		struct index_at	{	};
 
-	template <typename N, size_t... indices>	struct dummy_b;
-
+	template <typename , size_t...>		struct apart_i;
 	template <size_t... num, size_t... indices>
-	struct dummy_b<index_tuple<num...>, indices...> : elem_at<num, indices>...	{	};
+	struct apart_i<index_tuple<num...>, indices...> : index_at<num, indices>...	{	};
+
+	//  get N_th type of a sequence of types
+	template <size_t , typename >	struct type_at	{	};
+
+	template <typename , typename...>	struct apart_t;
+	template <size_t... num, typename... types>
+	struct apart_t<index_tuple<num...>, types...> : type_at<num, types>...		{	};
 
 	template <size_t N>
-	struct acceptor	{
-		template <size_t V>
-		static constexpr size_t accept(const elem_at<N, V>&)	{	return V;	}
+	struct up_caster	{
+		template <size_t i>
+		static constexpr size_t upcast(const index_at<N, i>&)	{	return i;	}
+		template <typename T>
+		static T upcast(const type_at<N, T>&);
 	};
 
-	//  access to N_th position of index_tuple  =>  at<N>(index_tuple);
+	//  get to N_th index of a sequence of indexs		at<N>(index_tuple);
     template <size_t N, template <size_t...> class index_tuple_t, size_t... indices>
     constexpr size_t at(index_tuple_t<indices...> )
     {
-		using type = dummy_b<index_range<0, sizeof...(indices)>, indices...>;
-		return acceptor<N>::accept(type{});
+		using type_imple = apart_i<index_range<0, sizeof...(indices)>, indices...>;
+		return up_caster<N>::upcast(type_imple{});
     }
+
+	//  get N_th type of a sequence of types			att<N>(tuple);
+    template <size_t , typename>	struct att_imple;
+    template <size_t N, template <typename...> class tuple_t, typename... T>
+    struct att_imple<N, tuple_t<T...>>    {
+		using type_imple = apart_t<index_range<0, sizeof...(T)>, T...>;
+		typedef decltype(up_caster<N>::upcast(type_imple{}))			type;
+    };
+
+	template <size_t N, typename T>
+	using att = typename att_imple<N, T>::type;
 
 	//=====================================================================================
 	//std::remove_reference && std::remove_cv
@@ -87,41 +106,6 @@ namespace detail	{
 	template<typename T, typename U>
 		struct is_same_ignoring_cv_ref :
 			std::is_same<typename remove_ref_cv<T>::type, typename remove_ref_cv<U>::type>	{	};
-	//--------------------------------------------------------------------
-	//	[type0, type1, type2, ..., typeM, nil) ... typeN ,,,
-	//       0,     1,     2, ....        M+1
-	template<typename... Tail>
-	struct tuple_limit	{
-		static constexpr size_t value = 0;
-	};
-
-	template<typename Head, typename... Tail>
-	struct tuple_limit<Head, Tail...>	{
-		static constexpr size_t value = is_same_ignoring_cv_ref<Head, nil>::value?
-													0								:
-													1 + tuple_limit<Tail...>::value	;
-	};
-	//
-	template<typename... Params>
-	struct tuple_limit<std::tuple<Params...>>	{
-		static constexpr size_t value = tuple_limit<Params...>::value;
-	};
-	//--------------------------------------------------------------------
-	//type of invoke    呼び出しの型
-	//obj.*, pobj->*
-	struct mem_c	{	};
-	//obj.*(), pobj->*()
-	struct memF_c	{	};
-	//functor    ファンクタ型（フリー関数、ラムダ）
-	struct fnc_c	{	};
-	//==================================================================
-	//tuple<type of invoke, return type, sizeof... parameters>    呼び出しの型
-	template <typename C, typename R, size_t N>
-	struct sig_type		{
-		typedef C	call_type;
-		typedef R	result_type;
-		static constexpr size_t value = N;
-	};
 	//==================================================================
 
 	//parameter buffer    パラメータバッファ
@@ -149,6 +133,7 @@ namespace detail	{
 		T& get() const		{	return val;	}
 	};
 
+	//************************************************************************************************
 	//placeholder =======================================================================
 	//yield     _1st.yield<T>(functor)    値を評価するplaceholder
 	template <size_t N, typename R, typename F>
@@ -249,7 +234,43 @@ namespace detail	{
 				{	return std::forward<V>(v);	}
 			};
 	};
+
+	//************************************************************************************************
+	//type of invoke    呼び出しの型
+	//obj.*, pobj->*
+	struct mem_c	{	};
+	//obj.*(), pobj->*()
+	struct memF_c	{	};
+	//functor    ファンクタ型（フリー関数、ラムダ）
+	struct fnc_c	{	};
+	//--------------------------------------------------------------------
+	//tuple<type of invoke, return type, sizeof... parameters>    呼び出しの型
+	template <typename C, typename R, size_t N>
+	struct sig_type		{
+		typedef C	call_type;
+		typedef R	result_type;
+		static constexpr size_t value = N;
+	};
 	//---------------------------------------------------------------------------------
+	//	[type0, type1, type2, ..., typeM, nil) ... typeN ,,,
+	//       0,     1,     2, ....        M+1
+	template<typename... Tail>
+	struct nil_stop	{
+		static constexpr size_t value = 0;
+	};
+
+	template<typename Head, typename... Tail>
+	struct nil_stop<Head, Tail...>	{
+		static constexpr size_t value = is_same_ignoring_cv_ref<Head, nil>::value?
+												0								:
+												1 + nil_stop<Tail...>::value	;
+	};
+
+	template<typename... Params>
+	struct nil_stop<std::tuple<Params...>>	{
+		static constexpr size_t value = nil_stop<Params...>::value;
+	};
+	//--------------------------------------------------------------------
 	//handle a type as a raw ponter    スマートポインタ等を生ポインタと同様に扱うための変換 =======
 	//T:int => nil*,  int* => int*,  smart_ptr<int> => int*
 	template <typename T>
@@ -258,84 +279,17 @@ namespace detail	{
 		template <typename U>
 		static std::true_type test1(U&& u, decltype(*u, 0) = 0);
 		static std::false_type	test1(...);
-		using T1       = decltype(test1(getT()));
-		using psp_type = typename std::conditional<T1::value , T, nil*>::type; 
+		static constexpr bool flag = decltype(test1(getT()))::value;
+		using psp_type = typename std::conditional<flag , T, nil*>::type; 
 		static psp_type getPSP();
 	public:
 		typedef decltype(&*getPSP())	type;		//T:int=>nil*, int*=>int*, s_ptr<int>=>int*
 	};
+	//--------------------------------------------------------------------
 
-	//************************************************************************************************
-	//arguments    パラメータ
-	template <typename P>
-	struct ParamOf : param_buf<P>	{
-		using base = param_buf<P>;
-		using p_h  = typename remove_ref_cv<P>::type;
-		typedef P	param_t;
-		static constexpr size_t placeholder = std::is_placeholder<p_h>::value;
-		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
-	};
-	//----------------------------------------------------------------------------
-	template <typename P0, typename Params, size_t N, bool B>
-	class type_alternative	{
-		using ph     = typename remove_ref_cv<typename P0::param_t>::type;
-		using type_a = typename std::tuple_element<N-1, Params>::type;
-		using vtype  = typename parameter_evaluate<ph>::template eval<type_a>;
-	public:
-		typedef typename vtype::type			type;
-		static type get(const P0& p, Params&& params)
-		{
-			return vtype::get(p.get(), std::get<N-1>(std::forward<Params>(params)));
-		}
-	};
-
-	template <typename P0, typename Params>
-	struct type_alternative<P0, Params, 0, true>	{
-		typedef typename P0::param_t&			type;	//ここ
-		static type get(const P0& p, Params&& )
-		{
-			return p.get();
-		}
-	};
-
-	template <typename P0, typename Params, size_t N>
-	class type_alternative<P0, Params, N, false>		{
-		using ph    = typename remove_ref_cv<typename P0::param_t>::type;
-		using vtype = typename parameter_evaluate<ph>::template eval<nil>;
-	public:
-		typedef typename vtype::type			type;
-		static type get(const P0& p, Params&& )
-		{
-			return vtype::get(p.get(), nil());
-		}
-	};
-	//----------------------------------------------------------------------------
-	template <size_t N, typename Params1, typename Params2>
-	class alternative_result	{
-		using P0 = typename std::tuple_element<N, Params1>::type;
-		static constexpr size_t	placeholder	= P0::placeholder;
-		static constexpr bool small = (placeholder <= std::tuple_size<Params2>::value);
-		using alt_type = type_alternative<P0, Params2, placeholder, small>;
-	public:
-		typedef typename alt_type::type		result_type;
-		static result_type get(const Params1& params1, Params2&& params2)
-		{
-			return alt_type::get(std::get<N>(params1), std::forward<Params2>(params2));
-		}
-	};
-
-	template<size_t N, typename Params1, typename Params2>
-	auto get_and_convert(const Params1& params1, Params2&& params2)
-		->typename alternative_result<N, Params1, Params2>::result_type
-	{
-		using convert_result = alternative_result<N, Params1, Params2>		;
-		return convert_result::get(params1, std::forward<Params2>(params2));
-	}
-
-	//=================================================================================================
 	template<typename TPL>
 	class invokeType	{		//	SFINAE
-		static constexpr size_t ParamSize = tuple_limit<TPL>::value;
+		static constexpr size_t ParamSize = nil_stop<TPL>::value;
 		template<size_t N>
 			static auto get()->typename std::tuple_element<N, TPL>::type;
 		template<size_t N>
@@ -460,6 +414,72 @@ namespace detail	{
 		}
 	};
 
+	//************************************************************************************************
+	//arguments    パラメータ
+	template <typename P>
+	struct ParamOf : param_buf<P>	{
+		using base = param_buf<P>;
+		using p_h  = typename remove_ref_cv<P>::type;
+		typedef P	param_t;
+		static constexpr size_t placeholder = std::is_placeholder<p_h>::value;
+		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
+	};
+	//----------------------------------------------------------------------------
+	template <typename P0, typename Params, size_t N, bool B>
+	class type_alternative	{
+		using ph     = typename remove_ref_cv<typename P0::param_t>::type;
+		using type_a = typename std::tuple_element<N-1, Params>::type;
+		using vtype  = typename parameter_evaluate<ph>::template eval<type_a>;
+	public:
+		typedef typename vtype::type			type;
+		static type get(const P0& p, Params&& params)
+		{
+			return vtype::get(p.get(), std::get<N-1>(std::forward<Params>(params)));
+		}
+	};
+
+	template <typename P0, typename Params>
+	struct type_alternative<P0, Params, 0, true>	{
+		typedef typename P0::param_t&			type;	//ここ
+		static type get(const P0& p, Params&& )
+		{
+			return p.get();
+		}
+	};
+
+	template <typename P0, typename Params, size_t N>
+	class type_alternative<P0, Params, N, false>		{
+		using ph    = typename remove_ref_cv<typename P0::param_t>::type;
+		using vtype = typename parameter_evaluate<ph>::template eval<nil>;
+	public:
+		typedef typename vtype::type			type;
+		static type get(const P0& p, Params&& )
+		{
+			return vtype::get(p.get(), nil());
+		}
+	};
+	//----------------------------------------------------------------------------
+	template <size_t N, typename Params1, typename Params2>
+	class alternative_result	{
+		using P0 = typename std::tuple_element<N, Params1>::type;
+		static constexpr size_t	placeholder	= P0::placeholder;
+		static constexpr bool small = (placeholder <= std::tuple_size<Params2>::value);
+		using alt_type = type_alternative<P0, Params2, placeholder, small>;
+	public:
+		typedef typename alt_type::type		result_type;
+		static result_type get(const Params1& params1, Params2&& params2)
+		{
+			return alt_type::get(std::get<N>(params1), std::forward<Params2>(params2));
+		}
+	};
+
+	template<size_t N, typename Params1, typename Params2>
+	auto get_and_convert(const Params1& params1, Params2&& params2)
+		->typename alternative_result<N, Params1, Params2>::result_type
+	{
+		using convert_result = alternative_result<N, Params1, Params2>		;
+		return convert_result::get(params1, std::forward<Params2>(params2));
+	}
 	//***************************************************************************************
 	//main class    本体 ====================================================================
 	template <typename... Vars>
@@ -538,22 +558,7 @@ namespace detail	{
 	}
 
 } //namespace my::detail
-} //namespace my
 
-//***********************************************************************************************
-namespace std {
-	template <size_t N, typename F, typename R>
-		struct is_placeholder<my::detail::placeholder_with_F<N, R, F>>	{
-			static constexpr size_t value = N;
-		};
-/*#if 0	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
-	template <> struct is_placeholder<boost::arg<1>> : integral_constant<int, 1> { };
-	...
-#endif*/
-}	//namespace std
-
-//***********************************************************************************************
-namespace my	{
 	//predefined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
 		namespace {
@@ -612,5 +617,19 @@ namespace my	{
 	using detail::index_tuple;
 	using detail::index_range;
 	using detail::at;
+	template <size_t N, typename T>	using att = typename detail::att_imple<N, T>::type;
 
 } //namespace my
+
+//***********************************************************************************************
+
+namespace std {
+	template <size_t N, typename F, typename R>
+		struct is_placeholder<my::detail::placeholder_with_F<N, R, F>>	{
+			static constexpr size_t value = N;
+		};
+/*#if 0	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
+	template <> struct is_placeholder<boost::arg<1>> : integral_constant<int, 1> { };
+	...
+#endif*/
+}	//namespace std
