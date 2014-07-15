@@ -8,91 +8,29 @@ namespace my	{
 namespace detail	{
 
 	struct nil	{	};
-	
+
 	//============================================================================
 	template <size_t... indices>
-	struct index_tuple	{
+	struct indEx_tuple	{
 		static constexpr size_t size()	{	return sizeof...(indices);	}
 	};
 
-	//------------------------------------------------
-	template <typename T1, typename T2>	struct index_cat;
-
-	template <size_t... indices1, size_t... indices2>
-	struct index_cat<index_tuple<indices1...>, index_tuple<indices2...>>	{
-		using type = index_tuple<indices1..., indices2...>;
+	// linear implementation is sufficient for bind parameters   線形実装で十分
+	template <size_t first, size_t last, typename result = indEx_tuple<>, bool flag = (first >= last)>
+	struct indEx_range_imple		{
+		typedef result type;
 	};
 
-	template <size_t N, typename T>	struct index_shift;
-
-	template <size_t N, size_t... indices>
-	struct index_shift<N, index_tuple<indices...>>	{
-		using type = index_tuple<N + indices...>;
-	};
-	//------------------------------------------------------------------------
-	template <size_t first, size_t len>
-	struct index_range_i		{
-		using type = typename index_shift<first, typename index_range_i<0, len>::type>::type;
+	template <size_t first, size_t last, size_t... indices>
+	struct	indEx_range_imple<first, last, indEx_tuple<indices...>, false> :
+					indEx_range_imple<first + 1, last, indEx_tuple<indices..., first>>		{
 	};
 
-	template <size_t len>
-	struct index_range_i<0, len>		{
-		static constexpr size_t h = len/2;
-		using type = typename index_cat<typename index_range_i<0, h>::type	,
-								typename index_range_i<h, len-h>::type
-						>::type;
-	};
+	template <size_t first, size_t last>
+	using indEx_range = typename indEx_range_imple<first, last>::type;
 
-	template <> struct index_range_i<0, 0>	{ using type = index_tuple<>; };
-	template <> struct index_range_i<0, 1>	{ using type = index_tuple<0>; };
-	template <> struct index_range_i<0, 2>	{ using type = index_tuple<0, 1>; };
-	//+**************************************************************
-    template <size_t first, size_t last>
-	using index_range = typename index_range_i<first, (first<last)? last - first: 0>::type;
+	//+*******************************************************************************************
 
-	//+**************************************************************
-	//  get N_th index of a sequence of indexs
-	template <size_t , size_t >		struct index_at	{	};
-
-	template <typename , size_t...>		struct apart_i;
-	template <size_t... num, size_t... indices>
-	struct apart_i<index_tuple<num...>, indices...> : index_at<num, indices>...	{	};
-
-	//  get N_th type of a sequence of types
-	template <size_t , typename >	struct type_at	{	};
-
-	template <typename , typename...>	struct apart_t;
-	template <size_t... num, typename... types>
-	struct apart_t<index_tuple<num...>, types...> : type_at<num, types>...		{	};
-
-	template <size_t N>
-	struct up_caster	{
-		template <size_t i>
-		static constexpr size_t upcast(const index_at<N, i>&)	{	return i;	}
-		template <typename T>
-		static T upcast(const type_at<N, T>&);
-	};
-
-	//  get to N_th index of a sequence of indexs		at<N>(index_tuple);
-    template <size_t N, template <size_t...> class index_tuple_t, size_t... indices>
-    constexpr size_t at(index_tuple_t<indices...> )
-    {
-		using type_imple = apart_i<index_range<0, sizeof...(indices)>, indices...>;
-		return up_caster<N>::upcast(type_imple{});
-    }
-
-	//  get N_th type of a sequence of types			att<N>(tuple);
-    template <size_t , typename>	struct att_imple;
-    template <size_t N, template <typename...> class tuple_t, typename... T>
-    struct att_imple<N, tuple_t<T...>>    {
-		using type_imple = apart_t<index_range<0, sizeof...(T)>, T...>;
-		typedef decltype(up_caster<N>::upcast(type_imple{}))			type;
-    };
-
-	template <size_t N, typename T>
-	using att = typename att_imple<N, T>::type;
-
-	//=====================================================================================
 	//std::remove_reference && std::remove_cv
 	template<typename T>
 	class remove_ref_cv	{
@@ -296,8 +234,8 @@ namespace detail	{
 			static auto getp()->typename raw_ptr_type<typename std::tuple_element<N, TPL>::type>::type;
 		//
 		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indices1...>	,
-							index_tuple<indices2...>	,
+		static auto test(	indEx_tuple<indices1...>	,
+							indEx_tuple<indices2...>	,
 							T0&&					t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
@@ -307,8 +245,8 @@ namespace detail	{
 						ParamSize - 1	>;
 		//
 		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indices1...>	,
-							index_tuple<indices2...>	,
+		static auto test(	indEx_tuple<indices1...>	,
+							indEx_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
@@ -318,8 +256,8 @@ namespace detail	{
 						ParamSize - 2	>;
 		//
 		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indices1...>	,
-							index_tuple<indices2...>	,
+		static auto test(	indEx_tuple<indices1...>	,
+							indEx_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
@@ -329,8 +267,8 @@ namespace detail	{
 						ParamSize - 2	>;
 		//
 		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indices1...>	,
-							index_tuple<indices2...>	,
+		static auto test(	indEx_tuple<indices1...>	,
+							indEx_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
@@ -340,8 +278,8 @@ namespace detail	{
 						ParamSize - 2	>;
 		//
 		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
-		static auto test(	index_tuple<indices1...>	,
-							index_tuple<indices2...>	,
+		static auto test(	indEx_tuple<indices1...>	,
+							indEx_tuple<indices2...>	,
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
@@ -350,8 +288,8 @@ namespace detail	{
 						decltype(std::forward<T1P>(t1p)->*t0)	,
 						ParamSize - 2	>;
 		//
-		static index_range<1, ParamSize>	index_tuple_1();
-		static index_range<2, ParamSize>	index_tuple_2();
+		static indEx_range<1, ParamSize>	index_tuple_1();
+		static indEx_range<2, ParamSize>	index_tuple_2();
 		using sig_t = decltype(test(	index_tuple_1()		,
 										index_tuple_2()		,
 										get<0>()			,
@@ -360,7 +298,7 @@ namespace detail	{
 	public:
 		typedef typename sig_t::call_type			call_type;
 		typedef typename sig_t::result_type			result_type;
-		typedef index_range<0, sig_t::value>		actual_indice;
+		typedef indEx_range<0, sig_t::value>		actual_indice;
 	};
 
 	//************************************************************************************************
@@ -369,14 +307,14 @@ namespace detail	{
 
 	//member
 	template <typename R, size_t... indices>
-	struct executer<R, mem_c, index_tuple<indices...>>		{
+	struct executer<R, mem_c, indEx_tuple<indices...>>		{
 		template <typename M, typename Obj>
 		R exec(M mem, Obj&& obj) const
 		{	return (std::forward<Obj>(obj)).*mem;	}
 	};
 	//----
 	template <typename R, size_t... indices>
-	struct executer<R, mem_c*, index_tuple<indices...>>		{
+	struct executer<R, mem_c*, indEx_tuple<indices...>>		{
 		template <typename M, typename pObj>
 		R exec(M mem, pObj&& pobj) const
 		{	return (*std::forward<pObj>(pobj)).*mem;	}
@@ -384,7 +322,7 @@ namespace detail	{
 
 	//member function
 	template <typename R, size_t... indices>
-	struct executer<R, memF_c, index_tuple<indices...>>	{
+	struct executer<R, memF_c, indEx_tuple<indices...>>	{
 		template <typename M, typename Obj, typename... Params>
 		R exec(M mem, Obj&& obj, Params&&... params) const
 		{
@@ -394,7 +332,7 @@ namespace detail	{
 	};
 	//----
 	template <typename R, size_t... indices>
-	struct executer<R, memF_c*, index_tuple<indices...>>	{
+	struct executer<R, memF_c*, indEx_tuple<indices...>>	{
 		template <typename M, typename pObj, typename... Params>
 		R exec(M mem, pObj&& pobj, Params&&... params) const
 		{
@@ -405,7 +343,7 @@ namespace detail	{
 
 	//functor
 	template <typename R, size_t... indices>
-	struct executer<R, fnc_c, index_tuple<indices...>>	{
+	struct executer<R, fnc_c, indEx_tuple<indices...>>	{
 		template <typename F, typename... Params>
 		R exec(F&& f, Params&&... params) const
 		{
@@ -491,7 +429,7 @@ namespace detail	{
 		template<typename Params2T, typename D>		struct invoke_type_i;
 		//------------
 		template<typename Params2T, size_t... indices>
-		struct invoke_type_i<Params2T, index_tuple<indices...>>	{
+		struct invoke_type_i<Params2T, indEx_tuple<indices...>>	{
 			static const Params1&	get1();
 			static Params2T			get2();
 			using ParamTuple = decltype(std::forward_as_tuple(
@@ -505,10 +443,10 @@ namespace detail	{
 		};
 		//
 		template<typename Params2T, size_t... indices>
-		auto call_imple(Params2T&& params2, index_tuple<indices...> ) const
-			->typename invoke_type_i<Params2T, index_tuple<indices...>>::result_type
+		auto call_imple(Params2T&& params2, indEx_tuple<indices...> ) const
+			->typename invoke_type_i<Params2T, indEx_tuple<indices...>>::result_type
 		{
-			typename invoke_type_i<Params2T, index_tuple<indices...>>::Executer_t	Executer;
+			typename invoke_type_i<Params2T, indEx_tuple<indices...>>::Executer_t	Executer;
 			return 
 				Executer.exec(
 					get_and_convert<indices>(params1, std::forward<Params2T>(params2))...
@@ -517,15 +455,15 @@ namespace detail	{
 	public:
 		BindOf(Vars&&... vars) : params1(std::forward<Vars>(vars)...)	{	}
 		template <size_t... indices>
-		BindOf(std::tuple<Vars...>&& vars, index_tuple<indices...>) :
+		BindOf(std::tuple<Vars...>&& vars, indEx_tuple<indices...>) :
 				params1(std::get<indices>(std::forward<std::tuple<Vars...>>(vars))...)	{	}
 		//
 		template <typename... Params2>
 		auto operator ()(Params2&&... params2) const
-			->typename invoke_type_i<std::tuple<Params2...>, index_range<0, N>>::result_type
+			->typename invoke_type_i<std::tuple<Params2...>, indEx_range<0, N>>::result_type
 		{
 			return call_imple(	std::forward_as_tuple(std::forward<Params2>(params2)...),
-								index_range<0, N>()
+								indEx_range<0, N>()
 							);
 		}
 	};
@@ -538,12 +476,12 @@ namespace detail	{
 	}
 
 	template <size_t... indices>
-	auto granulate(index_tuple<indices...>&& )
+	auto granulate(indEx_tuple<indices...>&& )
 		-> std::tuple<placeholder_with_F<indices, void, void>...>
 	{
 		return std::tuple<placeholder_with_F<indices, void, void>...>();
 	};
-	
+
 	template <typename... T>
 	auto untie_vars(T&&... t)->decltype(std::tuple_cat(granulate(std::forward<T>(t))...))
 	{
@@ -553,7 +491,7 @@ namespace detail	{
 	template <typename... Vars>
 	auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<Vars...>
 	{
-		using index = index_range<0, sizeof...(Vars)>;
+		using index = indEx_range<0, sizeof...(Vars)>;
 		return BindOf<Vars...>(std::forward<std::tuple<Vars...>>(vars), index());
 	}
 
@@ -588,9 +526,9 @@ namespace detail	{
 		//this will be converted to tuple of placeholders by granulate function afterward
 		// default parameter T is a workaround for visual c++ 2013 CTP
 		template <size_t N, typename T = void>
-		auto until(const detail::placeholder_with_F<N, T, T>& ) ->detail::index_range<1, N+1>
+		auto until(const detail::placeholder_with_F<N, T, T>& ) ->detail::indEx_range<1, N+1>
 		{
-			return detail::index_range<1, N+1>{};
+			return detail::indEx_range<1, N+1>{};
 		}
 
 		//range(_2nd, _9th) => [_2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
@@ -598,9 +536,9 @@ namespace detail	{
 		// default parameter T is a workaround for visual c++ 2013 CTP
 		template <size_t M, size_t N, typename T = void>
 		auto range(	const detail::placeholder_with_F<M, T, T>& ,
-					const detail::placeholder_with_F<N, T, T>& ) ->detail::index_range<M, N+1>
+					const detail::placeholder_with_F<N, T, T>& ) ->detail::indEx_range<M, N+1>
 		{
-			return detail::index_range<M, N+1>{};
+			return detail::indEx_range<M, N+1>{};
 		}
 	}	// my::placeholders
 
@@ -613,12 +551,6 @@ namespace detail	{
 		return detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...));
 	}
 
-	//************************************************************************
-	using detail::index_tuple;
-	using detail::index_range;
-	using detail::at;
-	template <size_t N, typename T>	using att = typename detail::att_imple<N, T>::type;
-
 } //namespace my
 
 //***********************************************************************************************
@@ -628,8 +560,8 @@ namespace std {
 		struct is_placeholder<my::detail::placeholder_with_F<N, R, F>>	{
 			static constexpr size_t value = N;
 		};
-/*#if 0	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
-	template <> struct is_placeholder<boost::arg<1>> : integral_constant<int, 1> { };
-	...
-#endif*/
+	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
+	//template <> struct is_placeholder<boost::arg<1>> : integral_constant<int, 1> { };
+	//...
+
 }	//namespace std
