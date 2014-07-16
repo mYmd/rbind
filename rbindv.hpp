@@ -49,7 +49,7 @@ namespace detail	{
 	//parameter buffer    パラメータバッファ
 	template <typename T>
 	struct param_buf	{
-		mutable T		val;
+		mutable T		val;		//std::unique_ptr<T>
 		typedef T		type;
 		param_buf(T&& t) : val(std::forward<T>(t))	{	}
 		T& get() const		{	return val;	}
@@ -215,7 +215,7 @@ namespace detail	{
 	class raw_ptr_type	{
 		static T getT();
 		template <typename U>
-		static std::true_type test1(U&& u, decltype(*u, 0) = 0);
+		static std::true_type test1(U&& u, decltype(*u, static_cast<void>(0), 0) = 0);
 		static std::false_type	test1(...);
 		static constexpr bool flag = decltype(test1(getT()))::value;
 		using psp_type = typename std::conditional<flag , T, nil*>::type; 
@@ -224,14 +224,12 @@ namespace detail	{
 		typedef decltype(&*getPSP())	type;		//T:int=>nil*, int*=>int*, s_ptr<int>=>int*
 	};
 	//--------------------------------------------------------------------
-
+	//determin the type of invocation
 	template<typename TPL>
 	class invokeType	{		//	SFINAE
-		static constexpr size_t ParamSize = nil_stop<TPL>::value;
 		template<size_t N>
 			static auto get()->typename std::tuple_element<N, TPL>::type;
-		template<size_t N>
-			static auto getp()->typename raw_ptr_type<typename std::tuple_element<N, TPL>::type>::type;
+		static constexpr size_t ParamSize = nil_stop<TPL>::value;
 		//
 		template<size_t... indices1, size_t... indices2, typename T0, typename T1, typename T1P>
 		static auto test(	indEx_tuple<indices1...>	,
@@ -239,7 +237,7 @@ namespace detail	{
 							T0&&					t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype(std::forward<T0>(t0)(get<indices1>()...), 1) = 0	)
+							decltype(std::forward<T0>(t0)(get<indices1>()...), static_cast<void>(0), 1) = 0	)
 			->sig_type<	fnc_c	,
 						decltype(std::forward<T0>(t0)(get<indices1>()...))	,
 						ParamSize - 1	>;
@@ -250,7 +248,7 @@ namespace detail	{
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype((std::forward<T1>(t1).*t0)(get<indices2>()...), 1) = 0	)
+							decltype((std::forward<T1>(t1).*t0)(get<indices2>()...), static_cast<void>(0), 1) = 0	)
 			->sig_type<	memF_c	,
 						decltype((std::forward<T1>(t1).*t0)(get<indices2>()...))	,
 						ParamSize - 2	>;
@@ -261,7 +259,7 @@ namespace detail	{
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype((std::forward<T1P>(t1p)->*t0)(get<indices2>()...), 1) = 0	)
+							decltype((std::forward<T1P>(t1p)->*t0)(get<indices2>()...), static_cast<void>(0), 1) = 0	)
 			->sig_type<	memF_c*		,
 						decltype((std::forward<T1P>(t1p)->*t0)(get<indices2>()...))	,
 						ParamSize - 2	>;
@@ -272,7 +270,7 @@ namespace detail	{
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype(std::forward<T1>(t1).*t0, 1) = 0	)
+							decltype(std::forward<T1>(t1).*t0, static_cast<void>(0), 1) = 0	)
 			->sig_type<	mem_c	,
 						decltype(std::forward<T1>(t1).*t0)	,
 						ParamSize - 2	>;
@@ -283,18 +281,18 @@ namespace detail	{
 							T0						t0	,
 							T1&&					t1	,
 							T1P&&					t1p	,
-							decltype(std::forward<T1P>(t1p)->*t0, 1) = 0	)
+							decltype(std::forward<T1P>(t1p)->*t0, static_cast<void>(0), 1) = 0	)
 			->sig_type<	mem_c*	,
 						decltype(std::forward<T1P>(t1p)->*t0)	,
 						ParamSize - 2	>;
 		//
-		static indEx_range<1, ParamSize>	index_tuple_1();
-		static indEx_range<2, ParamSize>	index_tuple_2();
-		using sig_t = decltype(test(	index_tuple_1()		,
-										index_tuple_2()		,
-										get<0>()			,
-										get<1>()			,
-										getp<1>()			)	)	;
+		static auto getp()->typename raw_ptr_type<typename std::tuple_element<1, TPL>::type>::type;
+		//
+		using sig_t = decltype(test(indEx_range<1, ParamSize>{}	,
+									indEx_range<2, ParamSize>{}	,
+									get<0>()					,
+									get<1>()					,
+									getp()						)	)	;
 	public:
 		typedef typename sig_t::call_type			call_type;
 		typedef typename sig_t::result_type			result_type;
@@ -302,19 +300,19 @@ namespace detail	{
 	};
 
 	//************************************************************************************************
-	// execute with parameters
-	template <typename R, typename T, typename A> struct executer;
+	// execute
+	template <typename R, typename T, typename A> struct executor;
 
 	//member
 	template <typename R, size_t... indices>
-	struct executer<R, mem_c, indEx_tuple<indices...>>		{
+	struct executor<R, mem_c, indEx_tuple<indices...>>		{
 		template <typename M, typename Obj>
 		R exec(M mem, Obj&& obj) const
 		{	return (std::forward<Obj>(obj)).*mem;	}
 	};
 	//----
 	template <typename R, size_t... indices>
-	struct executer<R, mem_c*, indEx_tuple<indices...>>		{
+	struct executor<R, mem_c*, indEx_tuple<indices...>>		{
 		template <typename M, typename pObj>
 		R exec(M mem, pObj&& pobj) const
 		{	return (*std::forward<pObj>(pobj)).*mem;	}
@@ -322,7 +320,7 @@ namespace detail	{
 
 	//member function
 	template <typename R, size_t... indices>
-	struct executer<R, memF_c, indEx_tuple<indices...>>	{
+	struct executor<R, memF_c, indEx_tuple<indices...>>	{
 		template <typename M, typename Obj, typename... Params>
 		R exec(M mem, Obj&& obj, Params&&... params) const
 		{
@@ -332,7 +330,7 @@ namespace detail	{
 	};
 	//----
 	template <typename R, size_t... indices>
-	struct executer<R, memF_c*, indEx_tuple<indices...>>	{
+	struct executor<R, memF_c*, indEx_tuple<indices...>>	{
 		template <typename M, typename pObj, typename... Params>
 		R exec(M mem, pObj&& pobj, Params&&... params) const
 		{
@@ -343,7 +341,7 @@ namespace detail	{
 
 	//functor
 	template <typename R, size_t... indices>
-	struct executer<R, fnc_c, indEx_tuple<indices...>>	{
+	struct executor<R, fnc_c, indEx_tuple<indices...>>	{
 		template <typename F, typename... Params>
 		R exec(F&& f, Params&&... params) const
 		{
@@ -353,7 +351,7 @@ namespace detail	{
 	};
 
 	//************************************************************************************************
-	//arguments    パラメータ
+	//a parameter    パラメータ
 	template <typename P>
 	struct ParamOf : param_buf<P>	{
 		using base = param_buf<P>;
@@ -363,8 +361,8 @@ namespace detail	{
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
 	};
 	//----------------------------------------------------------------------------
-	template <typename P0, typename Params, size_t N, bool B>
-	class type_alternative	{
+	template <typename P0, typename Params, size_t N, bool B = true>
+	class alt_param	{
 		using ph     = typename remove_ref_cv<typename P0::param_t>::type;
 		using type_a = typename std::tuple_element<N-1, Params>::type;
 		using vtype  = typename parameter_evaluate<ph>::template eval<type_a>;
@@ -377,7 +375,7 @@ namespace detail	{
 	};
 
 	template <typename P0, typename Params>
-	struct type_alternative<P0, Params, 0, true>	{
+	struct alt_param<P0, Params, 0, true>	{
 		typedef typename P0::param_t&			type;	//ここ
 		static type get(const P0& p, Params&& )
 		{
@@ -386,7 +384,7 @@ namespace detail	{
 	};
 
 	template <typename P0, typename Params, size_t N>
-	class type_alternative<P0, Params, N, false>		{
+	class alt_param<P0, Params, N, false>		{		//N is out of range
 		using ph    = typename remove_ref_cv<typename P0::param_t>::type;
 		using vtype = typename parameter_evaluate<ph>::template eval<nil>;
 	public:
@@ -398,31 +396,30 @@ namespace detail	{
 	};
 	//----------------------------------------------------------------------------
 	template <size_t N, typename Params1, typename Params2>
-	class alternative_result	{
+	class param_result	{
 		using P0 = typename std::tuple_element<N, Params1>::type;
 		static constexpr size_t	placeholder	= P0::placeholder;
 		static constexpr bool small = (placeholder <= std::tuple_size<Params2>::value);
-		using alt_type = type_alternative<P0, Params2, placeholder, small>;
+		using alt_t = alt_param<P0, Params2, placeholder, small>;
 	public:
-		typedef typename alt_type::type		result_type;
+		typedef typename alt_t::type		result_type;
 		static result_type get(const Params1& params1, Params2&& params2)
 		{
-			return alt_type::get(std::get<N>(params1), std::forward<Params2>(params2));
+			return alt_t::get(std::get<N>(params1), std::forward<Params2>(params2));
 		}
 	};
 
 	template<size_t N, typename Params1, typename Params2>
-	auto get_and_convert(const Params1& params1, Params2&& params2)
-		->typename alternative_result<N, Params1, Params2>::result_type
+	auto param_at(const Params1& params1, Params2&& params2)
+		->typename param_result<N, Params1, Params2>::result_type
 	{
-		using convert_result = alternative_result<N, Params1, Params2>		;
-		return convert_result::get(params1, std::forward<Params2>(params2));
+		return param_result<N, Params1, Params2>::get(params1, std::forward<Params2>(params2));
 	}
+
 	//***************************************************************************************
 	//main class    本体 ====================================================================
 	template <typename... Vars>
 	class	BindOf	{
-		static constexpr size_t	N =  sizeof...(Vars);
 		using Params1 = std::tuple<ParamOf<Vars>...>;
 		Params1										params1;
 		//-----------------------------------------------
@@ -433,30 +430,31 @@ namespace detail	{
 			static const Params1&	get1();
 			static Params2T			get2();
 			using ParamTuple = decltype(std::forward_as_tuple(
-									my::detail::template get_and_convert<indices>(get1(), get2())...)
+									my::detail::template param_at<indices>(get1(), get2())...)
 										);
 			using invoke_type   = typename my::detail::invokeType<ParamTuple>;
 			using actual_indice = typename invoke_type::actual_indice;
 			using call_type     = typename invoke_type::call_type;
 			using result_type   = typename invoke_type::result_type;
-			using Executer_t    = executer<result_type, call_type, actual_indice>;
+			using Executor_t    = executor<result_type, call_type, actual_indice>;
 		};
 		//
 		template<typename Params2T, size_t... indices>
 		auto call_imple(Params2T&& params2, indEx_tuple<indices...> ) const
 			->typename invoke_type_i<Params2T, indEx_tuple<indices...>>::result_type
 		{
-			typename invoke_type_i<Params2T, indEx_tuple<indices...>>::Executer_t	Executer;
+			typename invoke_type_i<Params2T, indEx_tuple<indices...>>::Executor_t	Executor;
 			return 
-				Executer.exec(
-					get_and_convert<indices>(params1, std::forward<Params2T>(params2))...
+				Executor.exec(
+					param_at<indices>(params1, std::forward<Params2T>(params2))...
 				);
 		}
 	public:
-		BindOf(Vars&&... vars) : params1(std::forward<Vars>(vars)...)	{	}
 		template <size_t... indices>
 		BindOf(std::tuple<Vars...>&& vars, indEx_tuple<indices...>) :
 				params1(std::get<indices>(std::forward<std::tuple<Vars...>>(vars))...)	{	}
+		//
+		static constexpr size_t	N =  sizeof...(Vars);
 		//
 		template <typename... Params2>
 		auto operator ()(Params2&&... params2) const
