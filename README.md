@@ -24,8 +24,8 @@ rbind は std::bind を参照ベースにしたものです。
   you can set a value converter for each placeholder with yield method  
   yield メソッドで各placeholderに値の変換機能を付加できる
 
-  you can set a placeholder for the first argument  
-  第一引数もプレースホルダにできる
+  you can set a placeholder for the first argument that is a functor  
+  第一引数（すなわちファンクタ）もプレースホルダにできる
 
   rbind.hpp is old version (without variadic templates)
   rbindv.hpp is new version (with variadic templates)
