@@ -1,4 +1,4 @@
-//#pragma warning(disable : 4425 4647 4503)
+//#pragma warning(disable : 4425)
 #include "rbindv.hpp"	//#include "rbind.hpp"
 #include <iostream>
 #include <string>
