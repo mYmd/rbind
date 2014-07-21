@@ -94,6 +94,7 @@ namespace detail	{
 	//basic placeholder    基本のplaceholder
 	template <std::size_t N>
 	struct placeholder_with_F<N, void, void>	{
+		constexpr placeholder_with_F()	{	}
 		//assign the default parameter    デフォルト値を = で設定する
 		template <typename V>
 			auto operator =(V&& v) const -> placeholder_with_F<N, void, V>
@@ -129,7 +130,7 @@ namespace detail	{
 		template <typename V>
 			struct eval	{
 				typedef R	type;
-				static R get(placeholder_with_F<N, R, F>& t, V&& v)
+				static R get(placeholder_with_F<N, R, F> const & t, V&& v)
 				{	return t.eval(std::forward<V>(v));	}
 			};
 	};
@@ -140,7 +141,7 @@ namespace detail	{
 		template <typename V>
 			struct eval	{
 				typedef R	type;
-				static R get(placeholder_with_F<N, R, void>& , V&& v)
+				static R get(placeholder_with_F<N, R, void> const& , V&& v)
 				{	return static_cast<R>(std::forward<V>(v));	}
 			};
 	};
@@ -151,13 +152,13 @@ namespace detail	{
 		template <typename V, typename W = typename remove_ref_cv<V>::type>
 			struct eval	{			//if argument assigned    実引数あり
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void, T>& , V&& v)
+				static V&& get(placeholder_with_F<N, void, T> const& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
 			struct eval<V, nil>	{	//without argument    実引数なし → デフォルト値
 				typedef T&	type;
-				static T& get(placeholder_with_F<N, void, T>& t, V&& )
+				static T& get(placeholder_with_F<N, void, T> const& t, V&& )
 				{	return t.get();	}
 			};
 	};
@@ -168,7 +169,7 @@ namespace detail	{
 		template <typename V>
 			struct eval	{
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void, void>& , V&& v)
+				static V&& get(placeholder_with_F<N, void, void> const& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 	};
@@ -498,21 +499,21 @@ namespace detail	{
 	//predefined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
 		namespace {
-			detail::placeholder_with_F< 1, void, void>  _1st;
-			detail::placeholder_with_F< 2, void, void>  _2nd;
-			detail::placeholder_with_F< 3, void, void>  _3rd;
-			detail::placeholder_with_F< 4, void, void>  _4th;
-			detail::placeholder_with_F< 5, void, void>  _5th;
-			detail::placeholder_with_F< 6, void, void>  _6th;
-			detail::placeholder_with_F< 7, void, void>  _7th;
-			detail::placeholder_with_F< 8, void, void>  _8th;
-			detail::placeholder_with_F< 9, void, void>  _9th;
-			detail::placeholder_with_F<10, void, void> _10th;
-			detail::placeholder_with_F<11, void, void> _11th;
-			detail::placeholder_with_F<12, void, void> _12th;
-			detail::placeholder_with_F<13, void, void> _13th;
-			detail::placeholder_with_F<14, void, void> _14th;
-			detail::placeholder_with_F<15, void, void> _15th;
+			constexpr detail::placeholder_with_F< 1, void, void>  _1st;
+			constexpr detail::placeholder_with_F< 2, void, void>  _2nd;
+			constexpr detail::placeholder_with_F< 3, void, void>  _3rd;
+			constexpr detail::placeholder_with_F< 4, void, void>  _4th;
+			constexpr detail::placeholder_with_F< 5, void, void>  _5th;
+			constexpr detail::placeholder_with_F< 6, void, void>  _6th;
+			constexpr detail::placeholder_with_F< 7, void, void>  _7th;
+			constexpr detail::placeholder_with_F< 8, void, void>  _8th;
+			constexpr detail::placeholder_with_F< 9, void, void>  _9th;
+			constexpr detail::placeholder_with_F<10, void, void> _10th;
+			constexpr detail::placeholder_with_F<11, void, void> _11th;
+			constexpr detail::placeholder_with_F<12, void, void> _12th;
+			constexpr detail::placeholder_with_F<13, void, void> _13th;
+			constexpr detail::placeholder_with_F<14, void, void> _14th;
+			constexpr detail::placeholder_with_F<15, void, void> _15th;
 			//   ...
 		}
 
