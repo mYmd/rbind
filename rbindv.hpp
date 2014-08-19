@@ -234,7 +234,7 @@ namespace detail	{
 	template<typename TPL>
 	class invokeType	{		//	SFINAE
 		template<std::size_t N>
-			static auto get()->std::add_rvalue_reference_t<typename std::tuple_element<N, TPL>::type>;
+			static auto get()->decltype(std::declval<typename std::tuple_element<N, TPL>::type>());
 		static constexpr std::size_t ParamSize = nil_stop<TPL>::value;
 		//
 		template<std::size_t... indices1, std::size_t... indices2, typename T0, typename T1, typename T1P>
