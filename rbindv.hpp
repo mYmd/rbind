@@ -546,7 +546,7 @@ namespace detail	{
 	}	// mymd::placeholders
 
 	//************************************************************************
-	//user interfade / rbind functions       ユーザが使う rbind関数
+	//user interface / rbind functions       ユーザが使う rbind関数
 	template <typename... Vars>
 	auto rbind(Vars&&... vars)
 		->decltype(detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...)))
