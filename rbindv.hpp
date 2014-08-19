@@ -1,10 +1,12 @@
 //rbindv header
 //Copyright (c) 2014 Masahiko Yamada
 
-#pragma once
+#if !defined MMYYMMDD_RBIND_AND_PLACEHOLDERS_INCLUDED
+#define MMYYMMDD_RBIND_AND_PLACEHOLDERS_INCLUDED
+
 #include <functional>
 
-namespace my	{
+namespace mymd	{
 namespace detail	{
 
 	struct nil	{	};
@@ -15,7 +17,7 @@ namespace detail	{
 		static constexpr std::size_t size()	{	return sizeof...(indices);	}
 	};
 
-	// linear implementation is sufficient for bind parameters   線形実装で十分
+	// linear recursion is sufficient for bind parameters   線形再帰で十分
 	template <std::size_t first, std::size_t last, typename result = indEx_sequence<>, bool flag = (first >= last)>
 	struct indEx_range_imple		{
 		typedef result type;
@@ -40,10 +42,13 @@ namespace detail	{
 		typedef typename std::remove_cv<type1>::type	type;
 	};
 
+	template<typename T>
+	using remove_ref_cv_t = typename remove_ref_cv<T>::type;
+
 	// type compair without const/volatile and reference   cv属性と参照属性を外して型の同一性を比較
 	template<typename T, typename U>
 		struct is_same_ignoring_cv_ref :
-			std::is_same<typename remove_ref_cv<T>::type, typename remove_ref_cv<U>::type>	{	};
+			std::is_same<remove_ref_cv_t<T>, remove_ref_cv_t<U>>	{	};
 	//==================================================================
 
 	//parameter buffer    パラメータバッファ
@@ -113,7 +118,7 @@ namespace detail	{
 
 	//=======================================================================================
 	//convet from placeholder to argument    placeholderから実引数に変換 ====================
-	//not my placeholder    my::detail::placeholder以外
+	//not my placeholder    mymd::detail::placeholder以外
 	template <typename T>
 	struct parameter_evaluate	{
 		template <typename V>
@@ -149,7 +154,7 @@ namespace detail	{
 	//with default value    デフォルト値を与えられた
 	template <std::size_t N, typename T>
 	struct parameter_evaluate<placeholder_with_F<N, void, T>>	{
-		template <typename V, typename W = typename remove_ref_cv<V>::type>
+		template <typename V, typename W = remove_ref_cv_t<V>>
 			struct eval	{			//if argument assigned    実引数あり
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void, T> const& , V&& v)
@@ -209,27 +214,27 @@ namespace detail	{
 	struct nil_stop<std::tuple<Params...>>	{
 		static constexpr std::size_t value = nil_stop<Params...>::value;
 	};
+
 	//--------------------------------------------------------------------
 	//handle a type as a raw ponter    スマートポインタ等を生ポインタと同様に扱うための変換 =======
-	//T:int => nil*,  int* => int*,  smart_ptr<int> => int*
+	// int => nil*,  int* => int*,  smart_ptr<int> => int*,  itr<int> => int*
 	template <typename T>
 	class raw_ptr_type	{
-		static T getT();
 		template <typename U>
-		static std::true_type test1(U&& u, decltype(*u, static_cast<void>(0), 0) = 0);
+			static std::true_type test1(U&& u, decltype(*u, static_cast<void>(0), 0) = 0);
 		static std::false_type	test1(...);
-		static constexpr bool flag = decltype(test1(getT()))::value;
-		using psp_type = typename std::conditional<flag , T, nil*>::type; 
-		static psp_type getPSP();
+		static constexpr bool flag = decltype(test1(std::declval<T>()))::value;
+		using psp_type = typename std::conditional_t<flag , T, nil*>; 
 	public:
-		typedef decltype(&*getPSP())	type;		//T:int=>nil*, int*=>int*, s_ptr<int>=>int*
+		typedef decltype(&*std::declval<psp_type>())	type;
 	};
+
 	//--------------------------------------------------------------------
 	//determin the type of invocation
 	template<typename TPL>
 	class invokeType	{		//	SFINAE
 		template<std::size_t N>
-			static auto get()->typename std::tuple_element<N, TPL>::type;
+			static auto get()->std::add_rvalue_reference_t<typename std::tuple_element<N, TPL>::type>;
 		static constexpr std::size_t ParamSize = nil_stop<TPL>::value;
 		//
 		template<std::size_t... indices1, std::size_t... indices2, typename T0, typename T1, typename T1P>
@@ -287,13 +292,13 @@ namespace detail	{
 						decltype(std::forward<T1P>(t1p)->*t0)	,
 						ParamSize - 2	>;
 		//
-		static auto getp()->typename raw_ptr_type<typename std::tuple_element<1, TPL>::type>::type;
+		using raw_p_t = typename raw_ptr_type<typename std::tuple_element<1, TPL>::type>::type;
 		//
 		using sig_t = decltype(test(indEx_range<1, ParamSize>{}	,
 									indEx_range<2, ParamSize>{}	,
 									get<0>()					,
 									get<1>()					,
-									getp()						)	)	;
+									std::declval<raw_p_t>()		));
 	public:
 		typedef typename sig_t::call_type			call_type;
 		typedef typename sig_t::result_type			result_type;
@@ -356,7 +361,7 @@ namespace detail	{
 	template <typename P>
 	struct ParamOf : param_buf<P>	{
 		using base = param_buf<P>;
-		using p_h  = typename remove_ref_cv<P>::type;
+		using p_h  = remove_ref_cv_t<P>;
 		typedef P	param_t;
 		static constexpr std::size_t placeholder = std::is_placeholder<p_h>::value;
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
@@ -364,7 +369,7 @@ namespace detail	{
 	//----------------------------------------------------------------------------
 	template <typename P0, typename Params, std::size_t N, bool B = true>
 	class alt_param	{
-		using ph     = typename remove_ref_cv<typename P0::param_t>::type;
+		using ph     = remove_ref_cv_t<typename P0::param_t>;
 		using type_a = typename std::tuple_element<N-1, Params>::type;
 		using vtype  = typename parameter_evaluate<ph>::template eval<type_a>;
 	public:
@@ -386,7 +391,7 @@ namespace detail	{
 
 	template <typename P0, typename Params, std::size_t N>
 	class alt_param<P0, Params, N, false>		{		//N is out of range
-		using ph    = typename remove_ref_cv<typename P0::param_t>::type;
+		using ph    = remove_ref_cv_t<typename P0::param_t>;
 		using vtype = typename parameter_evaluate<ph>::template eval<nil>;
 	public:
 		typedef typename vtype::type			type;
@@ -429,11 +434,10 @@ namespace detail	{
 		template<typename Params2T, std::size_t... indices>
 		struct invoke_type_i<Params2T, indEx_sequence<indices...>>	{
 			static const Params1&	get1();
-			static Params2T			get2();
 			using ParamTuple = decltype(std::forward_as_tuple(
-									my::detail::template param_at<indices>(get1(), get2())...)
+									mymd::detail::template param_at<indices>(get1(), std::declval<Params2T>())...)
 										);
-			using invoke_type   = typename my::detail::invokeType<ParamTuple>;
+			using invoke_type   = typename mymd::detail::invokeType<ParamTuple>;
 			using actual_indice = typename invoke_type::actual_indice;
 			using call_type     = typename invoke_type::call_type;
 			using result_type   = typename invoke_type::result_type;
@@ -494,7 +498,7 @@ namespace detail	{
 		return BindOf<Vars...>(std::forward<std::tuple<Vars...>>(vars), index());
 	}
 
-} //namespace my::detail
+} //namespace mymd::detail
 
 	//predefined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
@@ -539,7 +543,7 @@ namespace detail	{
 		{
 			return detail::indEx_range<M, N+1>{};
 		}
-	}	// my::placeholders
+	}	// mymd::placeholders
 
 	//************************************************************************
 	//user interfade / rbind functions       ユーザが使う rbind関数
@@ -550,13 +554,13 @@ namespace detail	{
 		return detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...));
 	}
 
-} //namespace my
+} //namespace mymd
 
 //***********************************************************************************************
 
 namespace std {
 	template <std::size_t N, typename F, typename R>
-		struct is_placeholder<my::detail::placeholder_with_F<N, R, F>>	{
+		struct is_placeholder<mymd::detail::placeholder_with_F<N, R, F>>	{
 			static constexpr std::size_t value = N;
 		};
 	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
@@ -565,3 +569,4 @@ namespace std {
 
 }	//namespace std
 
+#endif
