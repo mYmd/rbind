@@ -78,12 +78,18 @@ namespace detail	{
 
 	//************************************************************************************************
 	//placeholder =======================================================================
-	//yield     _1st.yield<T>(functor)    値を評価するplaceholder
 	template <std::size_t N, typename R, typename F>
-	struct placeholder_with_F : param_buf<F>	{
+	struct placeholder_with_F;
+
+	template <typename F, typename V>
+	using yield_result_t = decltype((std::declval<F>())(std::declval<V>()));
+
+	//yield     _1st.yield<T>(functor)    値を評価するplaceholder
+	template <std::size_t N, typename F>
+	struct placeholder_with_F<N, F, F> : param_buf<F>	{
 		placeholder_with_F(F&& f) : param_buf<F>(std::forward<F>(f))	{	}
 		template <typename V>
-			R eval(V&& v) const	{ return (param_buf<F>::get())(std::forward<V>(v)); }
+			yield_result_t<F, V> eval(V&& v) const	{ return (param_buf<F>::get())(std::forward<V>(v)); }
 	};
 
 	//yield    _2nd.yield<T>()    statc_castするplaceholder
@@ -105,9 +111,9 @@ namespace detail	{
 			auto operator =(V&& v) const -> placeholder_with_F<N, void, V>
 			{ return placeholder_with_F<N, void, V>(std::forward<V>(v)); }
 		//yield
-		template <typename R, typename F>
-			auto yield(F&& f) const ->placeholder_with_F<N, R, F>
-			{ return placeholder_with_F<N, R, F>(std::forward<F>(f)); }
+		template <typename F>
+			auto yield(F&& f) const ->placeholder_with_F<N, F, F>
+			{ return placeholder_with_F<N, F, F>(std::forward<F>(f)); }
 		template <typename R>
 			auto yield(void) const ->placeholder_with_F<N, R, void>
 			{ return placeholder_with_F<N, R, void>(); }
@@ -130,12 +136,12 @@ namespace detail	{
 	};
 
 	//yield with a functor    ファンクタからyieldされた
-	template <std::size_t N, typename F, typename R>
-	struct parameter_evaluate<placeholder_with_F<N, R, F>>	{
+	template <std::size_t N, typename F>
+	struct parameter_evaluate<placeholder_with_F<N, F, F>>	{
 		template <typename V>
 			struct eval	{
-				typedef R	type;
-				static R get(placeholder_with_F<N, R, F> const & t, V&& v)
+				typedef yield_result_t<F, V>	type;
+				static type get(placeholder_with_F<N, F, F> const & t, V&& v)
 				{	return t.eval(std::forward<V>(v));	}
 			};
 	};
