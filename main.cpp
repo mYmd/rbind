@@ -56,7 +56,7 @@ int main()
 			    &f			,
 			    2014		,
 			    _1			,
-			    _2nd.yield<int>([](const std::string& s){ return s.length(); })
+			    _2nd.yield([](const std::string& s){ return s.length(); })
 			    );
 	result = b4(b, str);
 	std::cout << "---- convert augument by yield for the last argument" << std::endl;
