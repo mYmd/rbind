@@ -77,6 +77,15 @@ namespace detail	{
 	};
 
 	//************************************************************************************************
+	//parameter adaptation judge by Tr<V>::value
+	template <template <typename>class Tr>
+	struct condition_trait_1	{};
+
+	//parameter adaptation judge by Tr::template apply<V>::value
+	template <typename Tr>
+	struct condition_trait_2	{};
+	//************************************************************************************************
+
 	//placeholder =======================================================================
 	template <std::size_t N, typename R, typename F>
 	struct placeholder_with_F;
@@ -102,6 +111,14 @@ namespace detail	{
 		placeholder_with_F(T&& t) : param_buf<T>(std::forward<T>(t))	{	}
 	};
 
+	//parameter type adaptation 1
+	template <std::size_t N, template <typename>class Tr>
+	struct placeholder_with_F<N, void*, condition_trait_1<Tr>>	{};
+
+	//parameter type adaptation 2
+	template <std::size_t N, typename Tr>
+	struct placeholder_with_F<N, void*, condition_trait_2<Tr>>	{};
+
 	//basic placeholder    基本のplaceholder
 	template <std::size_t N>
 	struct placeholder_with_F<N, void, void>	{
@@ -116,11 +133,22 @@ namespace detail	{
 			{ return placeholder_with_F<N, F, F>(std::forward<F>(f)); }
 		template <typename R>
 			auto yield(void) const ->placeholder_with_F<N, R, void>
-			{ return placeholder_with_F<N, R, void>(); }
+			{ return placeholder_with_F<N, R, void>{}; }
+		//assert parameter type  1
+		template <template <typename>class Tr>
+			auto assert() const ->placeholder_with_F<N, void*, condition_trait_1<Tr>>
+			{ return placeholder_with_F<N, void*, condition_trait_1<Tr>>{}; }
+		//assert parameter type  2
+		template <typename Tr>
+			auto assert() const ->placeholder_with_F<N, void*, condition_trait_2<Tr>>
+			{ return placeholder_with_F<N, void*, condition_trait_2<Tr>>{}; }
+		template <typename Tr>
+			auto assert(Tr&& ) const ->placeholder_with_F<N, void*, condition_trait_2<Tr>>
+			{ return placeholder_with_F<N, void*, condition_trait_2<Tr>>{}; }
 	};
 
 	template <std::size_t N>
-	using plhdr_t = placeholder_with_F<N, void, void>;
+	using simple_placeholder = placeholder_with_F<N, void, void>;
 
 	//=======================================================================================
 	//convet from placeholder to argument    placeholderから実引数に変換 ====================
@@ -174,13 +202,41 @@ namespace detail	{
 			};
 	};
 
-	//basic    基本
-	template <std::size_t N>
-	struct parameter_evaluate<placeholder_with_F<N, void, void>>	{
+	//assert parameter type 2
+	template <std::size_t N, template <typename>class Tr>
+	struct parameter_evaluate<placeholder_with_F<N, void*, condition_trait_1<Tr>>>	{
 		template <typename V>
 			struct eval	{
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void, void> const& , V&& v)
+				static V&& get(placeholder_with_F<N, void*, condition_trait_1<Tr>> const& , V&& v)
+				{
+					static_assert(Tr<remove_ref_cv_t<V>>::value, "parameter type is rejected");
+					return std::forward<V>(v);
+				}
+			};
+	};
+
+	//assert parameter type 2
+	template <std::size_t N, typename Tr>
+	struct parameter_evaluate<placeholder_with_F<N, void*, condition_trait_2<Tr>>>	{
+		template <typename V>
+			struct eval	{
+				typedef V	type;
+				static V&& get(placeholder_with_F<N, void*, condition_trait_2<Tr>> const& , V&& v)
+				{
+					static_assert(Tr::template apply<remove_ref_cv_t<V>>::value, "parameter type is rejected");
+					return std::forward<V>(v);
+				}
+			};
+	};
+
+	//basic    基本
+	template <std::size_t N>
+	struct parameter_evaluate<simple_placeholder<N>>	{
+		template <typename V>
+			struct eval	{
+				typedef V	type;
+				static V&& get(simple_placeholder<N> const& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 	};
@@ -230,7 +286,7 @@ namespace detail	{
 			static std::true_type test1(U&& u, decltype(*u, static_cast<void>(0), 0) = 0);
 		static std::false_type	test1(...);
 		static constexpr bool flag = decltype(test1(std::declval<T>()))::value;
-		using psp_type = typename std::conditional_t<flag , T, nil*>; 
+		using psp_type = typename std::conditional<flag , T, nil*>::type; 
 	public:
 		typedef decltype(&*std::declval<psp_type>())	type;
 	};
@@ -509,27 +565,27 @@ namespace detail	{
 	//predefined placeholders _1st, _2nd, _3rd, _4th, ...      定義済みプレースホルダ 
 	namespace placeholders	{
 		namespace {
-			constexpr detail::placeholder_with_F< 1, void, void>  _1st;
-			constexpr detail::placeholder_with_F< 2, void, void>  _2nd;
-			constexpr detail::placeholder_with_F< 3, void, void>  _3rd;
-			constexpr detail::placeholder_with_F< 4, void, void>  _4th;
-			constexpr detail::placeholder_with_F< 5, void, void>  _5th;
-			constexpr detail::placeholder_with_F< 6, void, void>  _6th;
-			constexpr detail::placeholder_with_F< 7, void, void>  _7th;
-			constexpr detail::placeholder_with_F< 8, void, void>  _8th;
-			constexpr detail::placeholder_with_F< 9, void, void>  _9th;
-			constexpr detail::placeholder_with_F<10, void, void> _10th;
-			constexpr detail::placeholder_with_F<11, void, void> _11th;
-			constexpr detail::placeholder_with_F<12, void, void> _12th;
-			constexpr detail::placeholder_with_F<13, void, void> _13th;
-			constexpr detail::placeholder_with_F<14, void, void> _14th;
-			constexpr detail::placeholder_with_F<15, void, void> _15th;
+			constexpr detail::simple_placeholder< 1>  _1st;
+			constexpr detail::simple_placeholder< 2>  _2nd;
+			constexpr detail::simple_placeholder< 3>  _3rd;
+			constexpr detail::simple_placeholder< 4>  _4th;
+			constexpr detail::simple_placeholder< 5>  _5th;
+			constexpr detail::simple_placeholder< 6>  _6th;
+			constexpr detail::simple_placeholder< 7>  _7th;
+			constexpr detail::simple_placeholder< 8>  _8th;
+			constexpr detail::simple_placeholder< 9>  _9th;
+			constexpr detail::simple_placeholder<10> _10th;
+			constexpr detail::simple_placeholder<11> _11th;
+			constexpr detail::simple_placeholder<12> _12th;
+			constexpr detail::simple_placeholder<13> _13th;
+			constexpr detail::simple_placeholder<14> _14th;
+			constexpr detail::simple_placeholder<15> _15th;
 			//   ...
 		}
 
 		// Alias for placeholder
 		template <std::size_t N>
-		using plhdr_t = detail::plhdr_t<N>;
+		using plhdr_t = detail::simple_placeholder<N>;
 
 		//until(_9th) => [_1st, _2nd, _3rd, _4th, _5th, _6th, _7th, _8th, _9th]
 		//this will be converted to tuple of placeholders by granulate function afterward
