@@ -49,6 +49,21 @@ namespace detail	{
 	template<typename T, typename U>
 		struct is_same_ignoring_cv_ref :
 			std::is_same<remove_ref_cv_t<T>, remove_ref_cv_t<U>>	{	};
+
+	// remove_rvalue_reference
+	template<class T>
+	struct remOve_rvaluE_reference	{
+		typedef T type;
+	};
+
+	template<class T>
+	struct remOve_rvaluE_reference<T&&>	{
+		typedef T type;
+	};
+
+	template<class T>
+	using remOve_rvaluE_reference_t = typename remOve_rvaluE_reference<T>::type;
+
 	//==================================================================
 
 	//parameter buffer    パラメータバッファ
@@ -210,7 +225,7 @@ namespace detail	{
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void*, condition_trait_1<Tr>> const& , V&& v)
 				{
-					static_assert(Tr<remove_ref_cv_t<V>>::value, "parameter type is rejected");
+					static_assert(Tr<remOve_rvaluE_reference_t<V>>::value, "parameter type is rejected");
 					return std::forward<V>(v);
 				}
 			};
@@ -224,7 +239,7 @@ namespace detail	{
 				typedef V	type;
 				static V&& get(placeholder_with_F<N, void*, condition_trait_2<Tr>> const& , V&& v)
 				{
-					static_assert(Tr::template apply<remove_ref_cv_t<V>>::value, "parameter type is rejected");
+					static_assert(Tr::template apply<remOve_rvaluE_reference_t<V>>::value, "parameter type is rejected");
 					return std::forward<V>(v);
 				}
 			};
