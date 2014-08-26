@@ -10,6 +10,14 @@ struct Func	{
 		{ return a * 10000 + b * 100 + c; }
 };
 
+template <template <typename> class Tr>
+struct noref {
+    template <typename V>
+        struct apply    {
+        static constexpr bool value = Tr<typename std::remove_reference<V>::type>::value;
+    };
+};
+
 int main()
 {
 	using namespace std::placeholders;
@@ -59,7 +67,7 @@ int main()
 	std::cout << "b = " << b << ", s = " << str << ", result = " << result << std::endl;
 	//----------------------------------------------------------------------------------
 	//parameter type assert   引数の型の制約
-	auto b5 = mymd::rbind(f, _1, _2, _3rd.assert<std::is_integral>());
+	auto b5 = mymd::rbind(f, _1, _2, _3rd.assert<noref<std::is_integral>>());
 	result = b5(a, b=8, c=23);
 	std::cout << "---- parameter type assert" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
