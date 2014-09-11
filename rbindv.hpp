@@ -1,5 +1,5 @@
 //rbindv header
-//Copyright (c) 2014 Masahiko Yamada
+//Copyright (c) 2014 mmYYmmdd
 
 #if !defined MMYYMMDD_RBIND_AND_PLACEHOLDERS_INCLUDED
 #define MMYYMMDD_RBIND_AND_PLACEHOLDERS_INCLUDED
@@ -369,7 +369,7 @@ namespace detail	{
 						decltype(std::forward<T1P>(t1p)->*t0)	,
 						ParamSize - 2	>;
 		//
-		using raw_p_t = typename raw_ptr_type<typename std::tuple_element<1, TPL>::type>::type;
+		using raw_p_t = typename raw_ptr_type<remove_ref_cv_t<typename std::tuple_element<1, TPL>::type>>::type;
 		//
 		using sig_t = decltype(test(indEx_range<1, ParamSize>{}	,
 									indEx_range<2, ParamSize>{}	,
@@ -434,6 +434,21 @@ namespace detail	{
 	};
 
 	//************************************************************************************************
+	//nested rbind to value at the same time  同時に評価するネストされたrbind
+	template <typename... Vars>
+	struct BindOfNested;
+    
+	template <typename>
+	struct is_nested   {
+        static constexpr bool value = false;
+    };
+
+    template <typename... Vars>
+	struct is_nested<BindOfNested<Vars...>>   {
+        static constexpr bool value = true;
+    };
+
+	//----------------------------------------------------------------------------
 	//a parameter    パラメータ
 	template <typename P>
 	struct ParamOf : param_buf<P>	{
@@ -441,10 +456,11 @@ namespace detail	{
 		using p_h  = remove_ref_cv_t<P>;
 		typedef P	param_t;
 		static constexpr std::size_t placeholder = std::is_placeholder<p_h>::value;
+        static constexpr bool nested = is_nested<p_h>::value;
 		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
 	};
 	//----------------------------------------------------------------------------
-	template <typename P0, typename Params, std::size_t N, bool B = true>
+	template <typename P0, typename Params, std::size_t N, bool B, bool nest>
 	class alt_param	{
 		using ph     = remove_ref_cv_t<typename P0::param_t>;
 		using type_a = typename std::tuple_element<N-1, Params>::type;
@@ -456,34 +472,46 @@ namespace detail	{
 			return vtype::get(p.get(), std::get<N-1>(std::forward<Params>(params)));
 		}
 	};
-
+	//not placeholder
 	template <typename P0, typename Params>
-	struct alt_param<P0, Params, 0, true>	{
+	struct alt_param<P0, Params, 0, true, false>	{
 		typedef typename P0::param_t&			type;	//ここ
 		static type get(const P0& p, Params&& )
 		{
 			return p.get();
 		}
 	};
-
+	//out of range
 	template <typename P0, typename Params, std::size_t N>
-	class alt_param<P0, Params, N, false>		{		//N is out of range
+	class alt_param<P0, Params, N, false, false>		{		//N is out of range
 		using ph    = remove_ref_cv_t<typename P0::param_t>;
 		using vtype = typename parameter_evaluate<ph>::template eval<nil>;
 	public:
 		typedef typename vtype::type			type;
 		static type get(const P0& p, Params&& )
 		{
-			return vtype::get(p.get(), nil());
+			return vtype::get(p.get(), nil{});
 		}
 	};
+	//nested rbind to value at the same time  同時に評価するネストされたrbind
+	template <typename P0, typename Params>
+	class alt_param<P0, Params, 0, true, true>		{		//
+        using nested = remove_ref_cv_t<typename P0::param_t>;
+        static constexpr std::size_t N = nested::N;
+	public:
+		typedef decltype(std::declval<nested>().call_imple(std::declval<Params>(), indEx_range<0, N>{}))	type;
+		static type get(const P0& p, Params&& params)
+		{
+			return p.get().call_imple(std::forward<Params>(params), indEx_range<0, N>{});
+		}
+	};//*/
 	//----------------------------------------------------------------------------
 	template <std::size_t N, typename Params1, typename Params2>
 	class param_result	{
 		using P0 = typename std::tuple_element<N, Params1>::type;
 		static constexpr std::size_t	placeholder	= P0::placeholder;
 		static constexpr bool small = (placeholder <= std::tuple_size<Params2>::value);
-		using alt_t = alt_param<P0, Params2, placeholder, small>;
+		using alt_t = alt_param<P0, Params2, placeholder, small, P0::nested>;
 	public:
 		typedef typename alt_t::type		result_type;
 		static result_type get(const Params1& params1, Params2&& params2)
@@ -521,6 +549,7 @@ namespace detail	{
 			using Executor_t    = executor<result_type, call_type, actual_indice>;
 		};
 		//
+	protected:
 		template<typename Params2T, std::size_t... indices>
 		auto call_imple(Params2T&& params2, indEx_sequence<indices...> ) const
 			->typename invoke_type_i<Params2T, indEx_sequence<indices...>>::result_type
@@ -543,10 +572,35 @@ namespace detail	{
 			->typename invoke_type_i<std::tuple<Params2...>, indEx_range<0, N>>::result_type
 		{
 			return call_imple(	std::forward_as_tuple(std::forward<Params2>(params2)...),
-								indEx_range<0, N>()
+								indEx_range<0, N>{}
 							);
 		}
+		//
+		auto operator *() const ->BindOfNested<Vars...>;
 	};
+
+	//BindOf is not a pointer type       BindOfはポインタじゃない
+	template <typename... Vars>
+	class raw_ptr_type<BindOf<Vars...>>	{
+	public:
+		typedef nil* type;
+	};
+
+	//*******************************************************************
+	//nested rbind to value at the same time  同時に評価するネストされたrbind
+	template <typename... Vars>
+	struct BindOfNested : private BindOf<Vars...>	{
+		BindOfNested(const BindOf<Vars...>& b) : BindOf<Vars...>(b)			{ }
+		BindOfNested(BindOf<Vars...>&& b) : BindOf<Vars...>(std::move(b))	{ }
+		using BindOf<Vars...>::call_imple;
+        static constexpr std::size_t	N =  sizeof...(Vars);
+	};
+
+	template <typename... Vars>
+	auto BindOf<Vars...>::operator *() const ->BindOfNested<Vars...>
+	{
+		return BindOfNested<Vars...>{*this};
+	}
 
 	//*******************************************************************
 	template <typename T>
@@ -574,6 +628,13 @@ namespace detail	{
 		using index = indEx_range<0, sizeof...(Vars)>;
 		return BindOf<Vars...>(std::forward<std::tuple<Vars...>>(vars), index());
 	}
+	//-------------------------------------------------
+	template <typename T>
+	struct emplace_t	{
+		template <typename... Vars>
+		T operator()(Vars&&... vars) const
+		{	return T{std::forward<Vars>(vars)...};	}
+	};
 
 } //namespace mymd::detail
 
@@ -629,6 +690,12 @@ namespace detail	{
 		->decltype(detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...)))
 	{
 		return detail::rbind_imple(detail::untie_vars(std::forward<Vars>(vars)...));
+	}
+	//construct of typeT   型Tのコンストラクタ呼び出し
+	template <typename T, typename... Vars>
+	auto emplace(Vars&&... vars) ->decltype(rbind(detail::emplace_t<T>{}, std::forward<Vars>(vars)...))
+	{
+		return rbind(detail::emplace_t<T>{}, std::forward<Vars>(vars)...);
 	}
 
 } //namespace mymd
