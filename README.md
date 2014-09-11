@@ -28,7 +28,7 @@ rbind は std::bind を参照ベースにしたものです。
   第一引数（すなわちファンクタ）もプレースホルダにできる
 
   rbinded object is a independent functor itself if in nested situation.  
-  it is different from std::bind, but you can let it dependent functor with unary operator *. 
+  it is different from std::bind, but you can let it dependent functor with unary operator *.  
   rbindオブジェクトは単にファンクタであり、ネストした場合でも従属して評価はされない。　
   この点はstd::bindとは異なる。ただし単項*演算子を付ければ従属した評価がなされる。
 
