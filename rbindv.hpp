@@ -599,7 +599,7 @@ namespace detail	{
 	template <typename... Vars>
 	auto BindOf<Vars...>::operator *() const ->BindOfNested<Vars...>
 	{
-		return BindOfNested<Vars...>{*this};
+		return BindOfNested<Vars...>(*this);
 	}
 
 	//*******************************************************************
@@ -633,7 +633,7 @@ namespace detail	{
 	struct emplace_t	{
 		template <typename... Vars>
 		T operator()(Vars&&... vars) const
-		{	return T{std::forward<Vars>(vars)...};	}
+		{	return T(std::forward<Vars>(vars)...);	}
 	};
 
 } //namespace mymd::detail
