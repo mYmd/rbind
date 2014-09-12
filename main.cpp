@@ -1,4 +1,4 @@
-#include "rbindv.hpp"	//#include "rbind.hpp"
+#include "rbindv.hpp"
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -71,5 +71,12 @@ int main()
 	result = b5(a, b=8, c=23);
 	std::cout << "---- parameter type assert" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
-	return 0;
+	//----------------------------------------------------------------------------------
+	//make nested dependent functor by operator*
+    	char s6[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    	auto b6 = mymd::rbind(std::plus<std::string>{},
+        	                  *mymd::emplace<std::string>(s6, _1),
+                	          *mymd::emplace<std::string>(_2, _3));
+	std::cout << "---- nested dependent rbind" << std::endl;
+	std::cout << b6(4, s6+20, s6+26) << std::endl;	return 0;
 }
