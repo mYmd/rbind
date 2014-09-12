@@ -4,8 +4,8 @@ rbind
 rbind is alternative of std::bind that is reference base.  
 It has additional function using special placeholders.
 
-rbind は std::bind を参照ベースにしたものです。  
-専用のプレースホルダと組み合わせれば追加機能も使えます。
+rbind は std::bind を参照ベースにした関数。  
+専用のプレースホルダと組み合わせれば追加機能も使える。
 
   all binded arguments are reference base without std::ref.  
   rbindしたすべての引数は参照ベースであり、std::refは必要としない。
@@ -28,10 +28,7 @@ rbind は std::bind を参照ベースにしたものです。
   第一引数（すなわちファンクタ）もプレースホルダにできる
 
   rbinded object is a independent functor itself if in nested situation.  
-  it is different from std::bind, but you can let it dependent functor with unary operator *.  
+  it is different from std::bind, but you can let it dependent functor with unary operator &ast;.  
   rbindオブジェクトは単にファンクタであり、ネストした場合でも従属して評価はされない。  
-  この点はstd::bindとは異なる。ただし単項*演算子を付ければ従属した評価がなされる。
+  この点はstd::bindとは異なる。ただし単項 &ast; 演算子を付ければ従属した評価がなされる。
 
-  rbind.hpp is old version (without variadic templates)
-  rbindv.hpp is new version (with variadic templates)
-  rbindv.hpp はvariadic template を使用したもので、rbind.hppはvariadic template未使用版
