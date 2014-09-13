@@ -102,68 +102,43 @@ namespace detail	{
 	//************************************************************************************************
 
 	//placeholder =======================================================================
-	template <std::size_t N, typename R, typename F>
-	struct placeholder_with_F;
-
-	template <typename F, typename V>
-	using yield_result_t = decltype((std::declval<F>())(std::declval<V>()));
-
-	//yield     _1st.yield(functor)    値を評価するplaceholder
-	template <std::size_t N, typename F>
-	struct placeholder_with_F<N, F, F> : param_buf<F>	{
-		placeholder_with_F(F&& f) : param_buf<F>(std::forward<F>(f))	{	}
-		template <typename V>
-			yield_result_t<F, V> eval(V&& v) const	{ return (param_buf<F>::get())(std::forward<V>(v)); }
-	};
-
-	//yield    _2nd.yield<T>()    statc_castするplaceholder
-	template <std::size_t N, typename R>
-	struct placeholder_with_F<N, R, void>		{	};
-
 	//with default parameter    デフォルト引数を付与されたplaceholder
 	template <std::size_t N, typename T>
-	struct placeholder_with_F<N, void, T> : param_buf<T>	{
-		placeholder_with_F(T&& t) : param_buf<T>(std::forward<T>(t))	{	}
+	struct placeholder_with_V : param_buf<T>	{
+		placeholder_with_V(T&& t) : param_buf<T>(std::forward<T>(t))	{	}
 	};
 
 	//parameter type adaptation 1
 	template <std::size_t N, template <typename>class Tr>
-	struct placeholder_with_F<N, void*, condition_trait_1<Tr>>	{};
+	struct placeholder_with_V<N, condition_trait_1<Tr>>	{};
 
 	//parameter type adaptation 2
 	template <std::size_t N, typename Tr>
-	struct placeholder_with_F<N, void*, condition_trait_2<Tr>>	{};
+	struct placeholder_with_V<N, condition_trait_2<Tr>>	{};
 
 	//basic placeholder    基本のplaceholder
 	template <std::size_t N>
-	struct placeholder_with_F<N, void, void>	{
-		constexpr placeholder_with_F()	{	}
+	struct placeholder_with_V<N, void>	{
+		constexpr placeholder_with_V()	{	}
 		//assign the default parameter    デフォルト値を = で設定する
 		template <typename V>
-			auto operator =(V&& v) const -> placeholder_with_F<N, void, V>
-			{ return placeholder_with_F<N, void, V>(std::forward<V>(v)); }
-		//yield
-		template <typename F>
-			auto yield(F&& f) const ->placeholder_with_F<N, F, F>
-			{ return placeholder_with_F<N, F, F>(std::forward<F>(f)); }
-		template <typename R>
-			auto yield(void) const ->placeholder_with_F<N, R, void>
-			{ return placeholder_with_F<N, R, void>{}; }
+			auto operator =(V&& v) const -> placeholder_with_V<N, V>
+			{ return placeholder_with_V<N, V>(std::forward<V>(v)); }
 		//assert parameter type  1
 		template <template <typename>class Tr>
-			auto assert() const ->placeholder_with_F<N, void*, condition_trait_1<Tr>>
-			{ return placeholder_with_F<N, void*, condition_trait_1<Tr>>{}; }
+			auto assert() const ->placeholder_with_V<N, condition_trait_1<Tr>>
+			{ return placeholder_with_V<N, condition_trait_1<Tr>>{}; }
 		//assert parameter type  2
 		template <typename Tr>
-			auto assert() const ->placeholder_with_F<N, void*, condition_trait_2<Tr>>
-			{ return placeholder_with_F<N, void*, condition_trait_2<Tr>>{}; }
+			auto assert() const ->placeholder_with_V<N, condition_trait_2<Tr>>
+			{ return placeholder_with_V<N, condition_trait_2<Tr>>{}; }
 		template <typename Tr>
-			auto assert(Tr&& ) const ->placeholder_with_F<N, void*, condition_trait_2<Tr>>
-			{ return placeholder_with_F<N, void*, condition_trait_2<Tr>>{}; }
+			auto assert(Tr&& ) const ->placeholder_with_V<N, condition_trait_2<Tr>>
+			{ return placeholder_with_V<N, condition_trait_2<Tr>>{}; }
 	};
 
 	template <std::size_t N>
-	using simple_placeholder = placeholder_with_F<N, void, void>;
+	using simple_placeholder = placeholder_with_V<N, void>;
 
 	//=======================================================================================
 	//convet from placeholder to argument    placeholderから実引数に変換 ====================
@@ -178,52 +153,30 @@ namespace detail	{
 			};
 	};
 
-	//yield with a functor    ファンクタからyieldされた
-	template <std::size_t N, typename F>
-	struct parameter_evaluate<placeholder_with_F<N, F, F>>	{
-		template <typename V>
-			struct eval	{
-				typedef yield_result_t<F, V>	type;
-				static type get(placeholder_with_F<N, F, F> const & t, V&& v)
-				{	return t.eval(std::forward<V>(v));	}
-			};
-	};
-
-	//static_cast
-	template <std::size_t N, typename R>
-	struct parameter_evaluate<placeholder_with_F<N, R, void>>	{
-		template <typename V>
-			struct eval	{
-				typedef R	type;
-				static R get(placeholder_with_F<N, R, void> const& , V&& v)
-				{	return static_cast<R>(std::forward<V>(v));	}
-			};
-	};
-
 	//with default value    デフォルト値を与えられた
 	template <std::size_t N, typename T>
-	struct parameter_evaluate<placeholder_with_F<N, void, T>>	{
+	struct parameter_evaluate<placeholder_with_V<N, T>>	{
 		template <typename V, typename W = remove_ref_cv_t<V>>
 			struct eval	{			//if argument assigned    実引数あり
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void, T> const& , V&& v)
+				static V&& get(placeholder_with_V<N, T> const& , V&& v)
 				{	return std::forward<V>(v);	}
 			};
 		template <typename V>
 			struct eval<V, nil>	{	//without argument    実引数なし → デフォルト値
 				typedef T&	type;
-				static T& get(placeholder_with_F<N, void, T> const& t, V&& )
+				static T& get(placeholder_with_V<N, T> const& t, V&& )
 				{	return t.get();	}
 			};
 	};
 
 	//assert parameter type 2
 	template <std::size_t N, template <typename>class Tr>
-	struct parameter_evaluate<placeholder_with_F<N, void*, condition_trait_1<Tr>>>	{
+	struct parameter_evaluate<placeholder_with_V<N, condition_trait_1<Tr>>>	{
 		template <typename V>
 			struct eval	{
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void*, condition_trait_1<Tr>> const& , V&& v)
+				static V&& get(placeholder_with_V<N, condition_trait_1<Tr>> const& , V&& v)
 				{
 					static_assert(Tr<remOve_rvaluE_reference_t<V>>::value, "parameter type is rejected");
 					return std::forward<V>(v);
@@ -233,11 +186,11 @@ namespace detail	{
 
 	//assert parameter type 2
 	template <std::size_t N, typename Tr>
-	struct parameter_evaluate<placeholder_with_F<N, void*, condition_trait_2<Tr>>>	{
+	struct parameter_evaluate<placeholder_with_V<N, condition_trait_2<Tr>>>	{
 		template <typename V>
 			struct eval	{
 				typedef V	type;
-				static V&& get(placeholder_with_F<N, void*, condition_trait_2<Tr>> const& , V&& v)
+				static V&& get(placeholder_with_V<N, condition_trait_2<Tr>> const& , V&& v)
 				{
 					static_assert(Tr::template apply<remOve_rvaluE_reference_t<V>>::value, "parameter type is rejected");
 					return std::forward<V>(v);
@@ -611,9 +564,9 @@ namespace detail	{
 
 	template <std::size_t... indices>
 	auto granulate(indEx_sequence<indices...>&& )
-		-> std::tuple<placeholder_with_F<indices, void, void>...>
+		-> std::tuple<placeholder_with_V<indices, void>...>
 	{
-		return std::tuple<placeholder_with_F<indices, void, void>...>();
+		return std::tuple<placeholder_with_V<indices, void>...>();
 	};
 
 	template <typename... T>
@@ -667,7 +620,7 @@ namespace detail	{
 		//this will be converted to tuple of placeholders by granulate function afterward
 		// default parameter T is a workaround for visual c++ 2013 CTP
 		template <std::size_t N, typename T = void>
-		auto until(const detail::placeholder_with_F<N, T, T>& ) ->detail::indEx_range<1, N+1>
+		auto until(const detail::placeholder_with_V<N, T>& ) ->detail::indEx_range<1, N+1>
 		{
 			return detail::indEx_range<1, N+1>{};
 		}
@@ -676,8 +629,8 @@ namespace detail	{
 		//this will be converted to tuple of placeholders by granulate function afterward
 		// default parameter T is a workaround for visual c++ 2013 CTP
 		template <std::size_t M, std::size_t N, typename T = void>
-		auto range(	const detail::placeholder_with_F<M, T, T>& ,
-					const detail::placeholder_with_F<N, T, T>& ) ->detail::indEx_range<M, N+1>
+		auto range(	const detail::placeholder_with_V<M, T>& ,
+					const detail::placeholder_with_V<N, T>& ) ->detail::indEx_range<M, N+1>
 		{
 			return detail::indEx_range<M, N+1>{};
 		}
@@ -703,8 +656,8 @@ namespace detail	{
 //***********************************************************************************************
 
 namespace std {
-	template <std::size_t N, typename F, typename R>
-		struct is_placeholder<mymd::detail::placeholder_with_F<N, R, F>>	{
+	template <std::size_t N, typename T>
+		struct is_placeholder<mymd::detail::placeholder_with_V<N, T>>	{
 			static constexpr std::size_t value = N;
 		};
 	//#ifdef BOOST_BIND_ARG_HPP_INCLUDED
