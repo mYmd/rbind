@@ -36,14 +36,14 @@ int main()
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	//----------------------------------------------------------------------------------
 	a = 2014, b = 2, c = 10;
-	//preset default value     デフォルト値の設定
-	auto b2 = mymd::rbind(f, a, _1, _2nd = 11);
+	//preset default value     デフォルト値の設定（実行時の値）
+	auto b2 = mymd::rbind(f, a, _1, _2nd = b+9);
 	result = b2(b, c);
 	std::cout << "---- do not use default value" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	a = 2014, b = 2, c = 10;
 	result = b2(b);
-	std::cout << "---- use default value for c(=11)" <<std::endl;
+	std::cout << "---- use default value(runtime) for c(=11)" <<std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	//----------------------------------------------------------------------------------
 	a = 2014, b = 4, c = 30;
@@ -53,30 +53,20 @@ int main()
 	std::cout << "---- use default value of original functor for c(=1)" << std::endl;
 	std::cout << "b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	//----------------------------------------------------------------------------------
-	a = 2014, b = 2, c = 1;
-	std::string str("abcdefg");
-	//convert argument by yield method     yieldメソッドによる引数変換
-	auto b4 = mymd::rbind(&Func::memFun	,
-			    &f			,
-			    2014		,
-			    _1			,
-			    _2nd.yield([](const std::string& s){ return s.length(); })
-			    );
-	result = b4(b, str);
-	std::cout << "---- convert augument by yield for the last argument" << std::endl;
-	std::cout << "b = " << b << ", s = " << str << ", result = " << result << std::endl;
-	//----------------------------------------------------------------------------------
+	//make nested dependent functor by operator *
+    char s5[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    auto b5 = mymd::rbind(std::plus<std::string>{},
+                          *mymd::emplace<std::string>(s5, _1),
+                          *mymd::rbind([](auto b, auto e){ return std::string(b, e); }, _2, _3)
+                          );
+	std::cout << "---- nested dependent rbindt functor by operator*" << std::endl;
+	std::cout << b5(4, s5+20, 5) << std::endl;
+    //----------------------------------------------------------------------------------
 	//parameter type assert   引数の型の制約
-	auto b5 = mymd::rbind(f, _1, _2, _3rd.assert<noref<std::is_integral>>());
-	result = b5(a, b=8, c=23);
+	auto b6 = mymd::rbind(f, _1, _2, _3rd.assert<noref<std::is_integral>>());
+	result = b6(a, b=8, c=23);
 	std::cout << "---- parameter type assert" << std::endl;
 	std::cout << "a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	//----------------------------------------------------------------------------------
-	//make nested dependent functor by operator*
-    	char s6[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    	auto b6 = mymd::rbind(std::plus<std::string>{},
-        	                  *mymd::emplace<std::string>(s6, _1),
-                	          *mymd::emplace<std::string>(_2, _3));
-	std::cout << "---- nested dependent rbind" << std::endl;
-	std::cout << b6(4, s6+20, s6+26) << std::endl;	return 0;
+    return 0;
 }
