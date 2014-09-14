@@ -62,7 +62,7 @@ int main()
 	char s5[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	auto b5 = mymd::rbind(std::plus<std::string>{},
                           *mymd::emplace<std::string>(s5, _1),
-                          *mymd::rbind([](auto b, auto e){ return std::string(b, e); }, _2, _3)
+                          *mymd::rbind([](const char* b, std::size_t e){ return std::string(b, e); }, _2, _3)
                           );
 	std::cout << "  " << b5(4, s5+20, 5) << std::endl;
     //----------------------------------------------------------------------------------
