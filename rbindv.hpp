@@ -69,26 +69,18 @@ namespace detail	{
 	//parameter buffer    パラメータバッファ
 	template <typename T>
 	struct param_buf	{
-		mutable T		val;		//std::unique_ptr<T>
-		typedef T		type;
-		param_buf(T&& t) : val(std::forward<T>(t))	{	}
-		T& get() const		{	return val;	}
+		T	val;		//std::unique_ptr<T>
+		typedef T	type;
+		param_buf(T&& t) : val(std::forward<T>(t))	{ }
+		T& get()	{	return val;	}
 	};
 	//		ref
 	template <typename T>
 	struct param_buf<T&>	{
-		T*				pval;
-		typedef T&		type;
-		param_buf(T& t) : pval(&t)					{	}
-		T& get() const		{ return *pval; }
-	};
-	//		rref
-	template <typename T>
-	struct param_buf<T&&>	{
-		mutable T		val;
-		typedef T		type;
-		param_buf(T&& t) : val(std::forward<T>(t))	{	}
-		T& get() const		{	return val;	}
+		T&	val;
+		typedef T&	type;
+		param_buf(T& t) : val(t)	{ }
+		T& get()	{ return val; }
 	};
 
 	//************************************************************************************************
@@ -104,8 +96,10 @@ namespace detail	{
 	//placeholder =======================================================================
 	//with default parameter    デフォルト引数を付与されたplaceholder
 	template <std::size_t N, typename T>
-	struct placeholder_with_V : param_buf<T>	{
-		placeholder_with_V(T&& t) : param_buf<T>(std::forward<T>(t))	{	}
+	struct placeholder_with_V	{
+		mutable param_buf<T> elem;
+		placeholder_with_V(T&& t) : elem(std::forward<T>(t))	{	}
+		T& get() const	{	return elem.get();	}
 	};
 
 	//parameter type adaptation 1
@@ -404,13 +398,14 @@ namespace detail	{
 	//----------------------------------------------------------------------------
 	//a parameter    パラメータ
 	template <typename P>
-	struct ParamOf : param_buf<P>	{
-		using base = param_buf<P>;
+	struct ParamOf	{
+		mutable param_buf<P> elem;
 		using p_h  = remove_ref_cv_t<P>;
 		typedef P	param_t;
 		static constexpr std::size_t placeholder = std::is_placeholder<p_h>::value;
         static constexpr bool nested = is_nested<p_h>::value;
-		ParamOf(P&& p) : base(std::forward<P>(p))	{	}
+		ParamOf(P&& p) : elem(std::forward<P>(p))	{	}
+		P& get() const	{	return elem.get();	}
 	};
 	//----------------------------------------------------------------------------
 	template <typename P0, typename Params, std::size_t N, bool B, bool nest>
@@ -576,10 +571,10 @@ namespace detail	{
 	}
 	//-------------------------------------------------
 	template <typename... Vars>
-	auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<Vars...>
+	auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<remOve_rvaluE_reference_t<Vars>...>
 	{
 		using index = indEx_range<0, sizeof...(Vars)>;
-		return BindOf<Vars...>(std::forward<std::tuple<Vars...>>(vars), index());
+		return BindOf<remOve_rvaluE_reference_t<Vars>...>(std::forward<std::tuple<Vars...>>(vars), index());
 	}
 	//-------------------------------------------------
 	template <typename T>
