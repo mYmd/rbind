@@ -43,7 +43,6 @@ int main()
 	result = b2(b);
 	std::cout << "  a = " << a << ", b = " << b << ", c = " << c << ", result = " << result << std::endl;
 	std::cout << "/ the first argument can be also a placeholder and can have a default value" <<std::endl;
-	result = std::plus<int>{}(2, 3);
 	auto b22 = mymd::rbind(_3rd = std::plus<int>{}, _1, _2);
 	result = b22(12, 5);
 	std::cout << "  (std::plus<int>{})(12, 5) = " << result << std::endl;
