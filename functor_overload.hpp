@@ -9,15 +9,16 @@ namespace mymd	{
 	namespace detail	{
 
 		template <typename F, typename... A>
-		struct bolt  {
+		class bolt  {
 			F fn;
-			constexpr bolt(F f) : fn(f)  {  }
+		public:
+			constexpr bolt(const F& f) : fn(f)  {  }
 			auto operator()(A... a) const->decltype(fn(std::forward<A>(a)...))
 			{  return fn(std::forward<A>(a)...);  }
 		};
 
 		template <typename T1, typename T2>
-		struct bolts: T1, T2  {
+		struct bolts : T1, T2  {
 			constexpr bolts(const T1& t1, const T2& t2) : T1(t1), T2(t2) { }
 			using T1::operator ();
 			using T2::operator ();
@@ -26,7 +27,7 @@ namespace mymd	{
 		template <typename F, typename... A>
 		struct bolts<bolt<F, A...>, void> : bolt<F, A...>  {
 			constexpr bolts(const bolt<F, A...>& t) : bolt<F, A...>(t) { }
-			using bolt<F, A...>::operator ();
+			//using bolt<F, A...>::operator ();
 		};
 
 		template <typename T1, typename T2, typename U1, typename U2>
@@ -40,7 +41,7 @@ namespace mymd	{
 	}
 
 	template <typename... A, typename F>
-	auto gen(F f) ->detail::bolts<detail::bolt<F, A...>, void>
+	auto gen(const F& f) ->detail::bolts<detail::bolt<F, A...>, void>
 	{
 		return detail::bolts<detail::bolt<F, A...>, void>(detail::bolt<F, A...>(f));
 	}
