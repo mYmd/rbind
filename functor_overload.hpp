@@ -60,7 +60,7 @@ namespace mymd	{
 		}
 	}	//namespace detail_fo
 
-	//user interfases are ,
+	//user interfaces are ,
 	//  mymd::gen< >() and mymd::cond< > and operator +
 
 	using detail_fo::cond;
