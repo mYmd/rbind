@@ -45,14 +45,14 @@ namespace mymd	{
 			T operator ()(V&&...) const { return val; }
 		};
 
-		//get N_th arg (origin is 1 as std::placeholders)
+		//get N_th arg (origin is 0)
 		template <std::size_t N>
 		struct return_n	{
 			constexpr return_n() { }
 			template <typename... V>
-			auto operator ()(V&&... v) const ->typename std::tuple_element<N-1, std::tuple<V...>>::type
+			auto operator ()(V&&... v) const ->typename std::tuple_element<N, std::tuple<V...>>::type
 			{
-				return std::get<N-1>(std::forward_as_tuple(std::forward<V>(v)...));
+				return std::get<N>(std::forward_as_tuple(std::forward<V>(v)...));
 			}
 		};
 		//-----------------------------------------------------
@@ -121,7 +121,7 @@ namespace mymd	{
 			(detail_fo::bolt<detail_fo::return_v<T>, A...>(detail_fo::return_v<T>{std::forward<T>(v)}));
 	}
 
-	//get N_th arg (origin is 1 as std::placeholders)
+	//get N_th arg (origin is 0)
 	template <std::size_t N, typename... A>
 	auto genn() ->detail_fo::bolts<detail_fo::bolt<detail_fo::return_n<N>, A...>, void>
 	{
