@@ -4,9 +4,9 @@
 #if !defined MMYYMMDD_FUNCTOR_OVERLOAD_INCLUDED
 #define MMYYMMDD_FUNCTOR_OVERLOAD_INCLUDED
 
-#include <tuple>
+#include <type_traits>
 
-namespace mymd	{
+namespace mymd {
 	namespace detail_fo	{
 
 		template <typename>
@@ -35,51 +35,32 @@ namespace mymd	{
 			template <typename... V>
 			void operator ()(V&&...) const {}
 		};
-
-		template <typename T>
-		class return_v	{
-			T val;
-		public:
-			constexpr return_v(T&& v) : val(std::forward<T>(v)) { }
-			template <typename... V>
-			T operator ()(V&&...) const { return val; }
-		};
-
-		//get N_th arg (origin is 0)
-		template <std::size_t N>
-		struct return_n	{
-			constexpr return_n() { }
-			template <typename... V>
-			auto operator ()(V&&... v) const ->typename std::tuple_element<N, std::tuple<V...>>::type
-			{
-				return std::get<N>(std::forward_as_tuple(std::forward<V>(v)...));
-			}
-		};
 		//-----------------------------------------------------
 		template <typename F, typename... A>
 		class bolt  {
 			F fn;
+			template <typename T, typename U>	//workaround for VC
+			using apply = typename arg<T, U>::apply;
 		protected:
 			template <typename... V>
-			auto invoke(types<V...>, typename arg<A, V>::apply::type... a) const
-				->decltype(fn(std::declval<typename arg<A, V>::apply::type>()...))
-			{  return fn(std::forward<typename arg<A, V>::apply::type>(a)...);  }
+			auto invoke(types<V...>, typename arg<A, V>::apply::type&&... a) const
+				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
+			{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
 		public:
 			constexpr bolt(const F& f) : fn(f)  {  }
 		};
 
 		template <typename T1, typename T2>
-		struct bolts : T1, T2  {
+		struct bolts : private T1, private T2  {
+            using T1::operator ();
+            using T2::operator ();
 			constexpr bolts(const T1& t1, const T2& t2) : T1(t1), T2(t2) { }
-			using T1::invoke;
-			using T2::invoke;
-			template <typename... V>
-			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
-			{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
 		};
 
 		template <typename F, typename... A>
-		struct bolts<bolt<F, A...>, void> : bolt<F, A...>  {
+		struct bolts<bolt<F, A...>, void> : private bolt<F, A...>  {
+            protected: using bolt<F, A...>::invoke;
+        public:
 			constexpr bolts(const bolt<F, A...>& t) : bolt<F, A...>(t) { }
 			template <typename... V>
 			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
@@ -92,10 +73,11 @@ namespace mymd	{
 		{
 			return bolts<bolts<T1, T2>, bolts<U1, U2>>(b, c);
 		}
+
 	}	//namespace detail_fo
 
 	//user interfaces are ,
-	//  mymd::gen< >( )  :  mymd::genv< >( )  :  mymd::genn< >()  :  mymd::cond< >  :  operator +
+	//  mymd::gen< >( )  ,  mymd::cond< >  ,  operator +
 
 	using detail_fo::cond;
 
@@ -111,22 +93,6 @@ namespace mymd	{
 	{
 		return detail_fo::bolts<detail_fo::bolt<detail_fo::no_action, A...>, void>
 			(detail_fo::bolt<detail_fo::no_action, A...>(detail_fo::no_action{}));
-	}
-
-	//return value
-	template <typename... A, typename T>
-	auto genv(T&& v) ->detail_fo::bolts<detail_fo::bolt<detail_fo::return_v<T>, A...>, void>
-	{
-		return detail_fo::bolts<detail_fo::bolt<detail_fo::return_v<T>, A...>, void>
-			(detail_fo::bolt<detail_fo::return_v<T>, A...>(detail_fo::return_v<T>{std::forward<T>(v)}));
-	}
-
-	//get N_th arg (origin is 0)
-	template <std::size_t N, typename... A>
-	auto genn() ->detail_fo::bolts<detail_fo::bolt<detail_fo::return_n<N>, A...>, void>
-	{
-		return detail_fo::bolts<detail_fo::bolt<detail_fo::return_n<N>, A...>, void>
-			(detail_fo::bolt<detail_fo::return_n<N>, A...>(detail_fo::return_n<N>{}));
 	}
 
 	//----------------------------------
@@ -169,7 +135,6 @@ namespace mymd	{
 			static constexpr bool value = first<T2>::value;
 		};
 	};
-
 }
 
 #endif
