@@ -49,30 +49,7 @@ namespace mymd {
 		public:
 			constexpr bolt(const F& f) : fn(f)  {  }
 		};
-
-		template <typename T1, typename T2>
-		struct bolts : private T1, private T2  {
-            using T1::operator ();
-            using T2::operator ();
-			constexpr bolts(const T1& t1, const T2& t2) : T1(t1), T2(t2) { }
-		};
-
-		template <typename F, typename... A>
-		struct bolts<bolt<F, A...>, void> : private bolt<F, A...>  {
-            protected: using bolt<F, A...>::invoke;
-        public:
-			constexpr bolts(const bolt<F, A...>& t) : bolt<F, A...>(t) { }
-			template <typename... V>
-			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
-			{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
-		};
-
-		template <typename T1, typename T2, typename U1, typename U2>
-		auto operator +(bolts<T1, T2> const& b, bolts<U1, U2> const& c)
-			->bolts<bolts<T1, T2>, bolts<U1, U2>>
-		{
-			return bolts<bolts<T1, T2>, bolts<U1, U2>>(b, c);
-		}
+		//----------------------------------------------
 
 	}	//namespace detail_fo
 
@@ -81,17 +58,41 @@ namespace mymd {
 
 	using detail_fo::cond;
 
-	template <typename... A, typename F>
-	auto gen(const F& f) ->detail_fo::bolts<detail_fo::bolt<F, A...>, void>
+	template <typename T1, typename T2>
+	struct bolts : private T1, private T2  {
+        using T1::operator ();
+        using T2::operator ();
+		constexpr bolts(const T1& t1, const T2& t2) : T1(t1), T2(t2) { }
+	};
+
+	template <typename F, typename... A>
+	struct bolts<detail_fo::bolt<F, A...>, void> : private detail_fo::bolt<F, A...>  {
+        protected: using detail_fo::bolt<F, A...>::invoke;
+    public:
+		constexpr bolts(const detail_fo::bolt<F, A...>& t) : detail_fo::bolt<F, A...>(t) { }
+		template <typename... V>
+		auto operator()(V&&... v) const->decltype(invoke(detail_fo::types<V...>{}, std::declval<V>()...))
+		{  return invoke(detail_fo::types<V...>{}, std::forward<V>(v)...);  }
+	};
+
+	template <typename T1, typename T2, typename U1, typename U2>
+	auto operator +(bolts<T1, T2> const& b, bolts<U1, U2> const& c)
+		->bolts<bolts<T1, T2>, bolts<U1, U2>>
 	{
-		return detail_fo::bolts<detail_fo::bolt<F, A...>, void>(detail_fo::bolt<F, A...>(f));
+		return bolts<bolts<T1, T2>, bolts<U1, U2>>(b, c);
+	}
+
+	template <typename... A, typename F>
+	auto gen(const F& f) ->bolts<detail_fo::bolt<F, A...>, void>
+	{
+		return bolts<detail_fo::bolt<F, A...>, void>(detail_fo::bolt<F, A...>(f));
 	}
 
 	//no action
 	template <typename... A>
-	auto gen() ->detail_fo::bolts<detail_fo::bolt<detail_fo::no_action, A...>, void>
+	auto gen() ->bolts<detail_fo::bolt<detail_fo::no_action, A...>, void>
 	{
-		return detail_fo::bolts<detail_fo::bolt<detail_fo::no_action, A...>, void>
+		return bolts<detail_fo::bolt<detail_fo::no_action, A...>, void>
 			(detail_fo::bolt<detail_fo::no_action, A...>(detail_fo::no_action{}));
 	}
 
