@@ -65,7 +65,6 @@ namespace detail	{
 	using remOve_rvaluE_reference_t = typename remOve_rvaluE_reference<T>::type;
 
 	//==================================================================
-
 	//parameter buffer    パラメータバッファ
 	template <typename T>
 	struct param_buf	{
@@ -73,14 +72,6 @@ namespace detail	{
 		typedef T	type;
 		param_buf(T&& t) : val(std::forward<T>(t))	{ }
 		T& get()	{	return val;	}
-	};
-	//		ref
-	template <typename T>
-	struct param_buf<T&>	{
-		T&	val;
-		typedef T&	type;
-		param_buf(T& t) : val(t)	{ }
-		T& get()	{ return val; }
 	};
 
 	//************************************************************************************************
