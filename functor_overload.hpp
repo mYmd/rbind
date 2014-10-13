@@ -46,7 +46,11 @@ namespace mymd {
 			template <typename... V>
 			auto invoke(types<V...>, typename arg<A, V>::apply::type&&... a) const
 				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
-			{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
+				{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
+			template <typename... V>
+			auto invoke(types<V...>, typename arg<A, V>::apply::type&&... a)
+				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
+				{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
 		public:
 			constexpr bolt(const F& f) : fn(f)  {  }
 		};
@@ -65,7 +69,10 @@ namespace mymd {
 			constexpr bolts(const F& t) : bolt<F, A...>(t) { }
 			template <typename... V>
 			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
-			{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+			template <typename... V>
+			auto operator()(V&&... v) ->decltype(invoke(types<V...>{}, std::declval<V>()...))
+				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
 		};
 
 		template <typename T1, typename T2, typename U1, typename U2>
