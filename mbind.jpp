@@ -130,6 +130,8 @@ namespace mymd  {
 			using apply = typename detail_mbind::m_pack<M, S<V...>>::type;
 		template <typename... B>
 			using bind = mbind<M, binder..., B...>;
+		template <typename... B>
+			using rebind = mbind<M, B...>;
 	};
 	//-------------------------------------------------
 	namespace detail_mbind  {
