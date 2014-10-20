@@ -136,29 +136,29 @@ namespace mymd  {
 	//-------------------------------------------------
 	namespace detail_mbind  {
 		template <typename T, typename = types<>, std::size_t C = T::count_placeholder>
-			struct or_and;
+			struct _x_supply;
 		template <typename T, typename... R, std::size_t C>
-		struct or_and<T, types<R...>, C>	{
-			using type = typename or_and<T, types<_x_, R...>, C - 1>::type;
+		struct _x_supply<T, types<R...>, C>	{
+			using type = typename _x_supply<T, types<_x_, R...>, C - 1>::type;
 		};
 		template <typename T, typename... R>
-		struct or_and<T, types<R...>, 0>	{
+		struct _x_supply<T, types<R...>, 0>	{
 			using type = mbind<T::template apply, R...>;
 		};
 	}	//detail_mbind
 
 	template <template <typename...> class M1, typename... B1, template <typename...> class M2, typename... B2>
 	auto operator || (const mbind<M1, B1...>& left, const mbind<M2, B2...>& right)
-		-> typename detail_mbind::or_and<typename detail_mbind::mbind_or<mbind<M1, B1...>, mbind<M2, B2...>>>::type
+		-> typename detail_mbind::_x_supply<typename detail_mbind::mbind_or<mbind<M1, B1...>, mbind<M2, B2...>>>::type
 	{
-		return typename detail_mbind::or_and<typename detail_mbind::mbind_or<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
+		return typename detail_mbind::_x_supply<typename detail_mbind::mbind_or<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
 	}
 	
 	template <template <typename...> class M1, typename... B1, template <typename...> class M2, typename... B2>
 	auto operator && (const mbind<M1, B1...>& left, const mbind<M2, B2...>& right)
-		-> typename detail_mbind::or_and<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type
+		-> typename detail_mbind::_x_supply<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type
 	{
-		return typename detail_mbind::or_and<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
+		return typename detail_mbind::_x_supply<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
 	}
 
 }
