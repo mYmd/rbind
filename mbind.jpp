@@ -148,14 +148,14 @@ namespace mymd  {
 	}	//detail_mbind
 
 	template <template <typename...> class M1, typename... B1, template <typename...> class M2, typename... B2>
-	auto operator || (const mbind<M1, B1...>& left, const mbind<M2, B2...>& right)
+	auto operator || (const mbind<M1, B1...>& , const mbind<M2, B2...>& )
 		-> typename detail_mbind::_x_supply<typename detail_mbind::mbind_or<mbind<M1, B1...>, mbind<M2, B2...>>>::type
 	{
 		return typename detail_mbind::_x_supply<typename detail_mbind::mbind_or<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
 	}
 	
 	template <template <typename...> class M1, typename... B1, template <typename...> class M2, typename... B2>
-	auto operator && (const mbind<M1, B1...>& left, const mbind<M2, B2...>& right)
+	auto operator && (const mbind<M1, B1...>& , const mbind<M2, B2...>& )
 		-> typename detail_mbind::_x_supply<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type
 	{
 		return typename detail_mbind::_x_supply<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
