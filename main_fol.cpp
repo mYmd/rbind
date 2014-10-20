@@ -37,6 +37,9 @@ struct Minus {
 int main()
 {
     using namespace mymd;
+    std::cout << "// sample for overload the calculation of numerics and of pointers" << std::endl;
+    std::cout << "// sets of signatures of two functors are same,  " << std::endl;
+    std::cout << "// and choice the members to use from them " << std::endl;
     std::cout << "//数値／ポインタに対する計算をオーバーロードする人工的な例" << std::endl;
     std::cout << "//ふたつのファンクタのシグネチャは同一。それを意識的に選択する。" << std::endl;
     auto mm = gen<cond<is_Numeric>, cond<is_Numeric>>(Plus{} ) + 
