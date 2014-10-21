@@ -23,12 +23,14 @@ namespace mymd {
 		//-----------------------------------------------------
 		template <typename T, typename>
 		struct arg  {
-			using apply = std::enable_if<true, T>;
+			using apply  = std::enable_if<true, T>;
+			using applyr = apply;
 		};
 		
 		template <template <typename> class C, bool B, typename V>
 		struct arg<cond<C, B>, V>  {
-			using apply = std::enable_if<B == C<V>::value, V>;
+			using apply  = std::enable_if<B == C<V>::value, V>;
+			using applyr = std::enable_if<B == C<V>::value, V&&>;
 		};
 		//-----------------------------------------------------
 		struct no_action	{
@@ -40,15 +42,15 @@ namespace mymd {
 		template <typename F, typename... A>
 		class bolt  {
 			F fn;
-			template <typename T, typename U>	//workaround for VC
-			using apply = typename arg<T, U>::apply;
+			template <typename T, typename U>
+			using apply = typename arg<T, U>::apply;	//workaround for VC
 		protected:
 			template <typename... V>
-			auto invoke(types<V...>, typename arg<A, V>::apply::type&&... a) const
+			auto invoke(types<V...>, typename arg<A, V>::applyr::type... a) const
 				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
 				{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
 			template <typename... V>
-			auto invoke(types<V...>, typename arg<A, V>::apply::type&&... a)
+			auto invoke(types<V...>, typename arg<A, V>::applyr::type... a)
 				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
 				{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
 		public:
@@ -56,15 +58,21 @@ namespace mymd {
 		};
 		//-----------------------------------------------------
 		template <typename T1, typename T2>
-		struct bolts : private T1, private T2  {
-			using T1::operator ();
-			using T2::operator ();
+		class bolts : private T1, private T2  {
+			protected: using T1::invoke; using T2::invoke;
+		public:
 			constexpr bolts(const T1& t1, const T2& t2) : T1(t1), T2(t2) { }
+			template <typename... V>
+			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
+				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+			template <typename... V>
+			auto operator()(V&&... v) ->decltype(invoke(types<V...>{}, std::declval<V>()...))
+				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
 		};
 
 		template <typename F, typename... A>
 		class bolts<bolt<F, A...>, void> : private bolt<F, A...>  {
-			using bolt<F, A...>::invoke;
+			protected : using bolt<F, A...>::invoke;
 		public:
 			constexpr bolts(const F& t) : bolt<F, A...>(t) { }
 			template <typename... V>
