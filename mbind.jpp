@@ -72,27 +72,27 @@ namespace mymd  {
 			using convert = typename apply_conv<C...>::template apply<V>;	//convert
 		};
 		//-----------------------------------------------
-		template <typename...>	struct types  { };
+		template <typename...> struct packeR { };
 		//-----------------------------------------------
-		template <typename, typename, typename = types<>> struct replace_placeholder;
+		template <typename, typename, typename = packeR<>> struct replace_placeholder;
 		template <typename T1, typename...T2, typename V1, typename... V2, typename...R>
-		struct replace_placeholder<types<T1, T2...>, types<V1, V2...>, types<R...>>	{
-			using result = types<R...>;
+		struct replace_placeholder<packeR<T1, T2...>, packeR<V1, V2...>, packeR<R...>>	{
+			using result = packeR<R...>;
 			using alt_t  = typename trap_placeholder<T1>::template convert<V1>;
-			using base_v = typename std::conditional<trap_placeholder<T1>::value, types<V2...>, types<V1, V2...>>::type;
-			using base_t = replace_placeholder<types<T2...>, base_v, types<R..., alt_t>>;
+			using base_v = typename std::conditional<trap_placeholder<T1>::value, packeR<V2...>, packeR<V1, V2...>>::type;
+			using base_t = replace_placeholder<packeR<T2...>, base_v, packeR<R..., alt_t>>;
 			using type = typename base_t::type;
 		};
 		template <typename V1, typename...V2, typename...R>
-		struct replace_placeholder<types<>, types<V1, V2...>, types<R...>>
-			{ using type = types<R...>; };
+		struct replace_placeholder<packeR<>, packeR<V1, V2...>, packeR<R...>>
+			{ using type = packeR<R...>; };
 		template <typename...T, typename...R>
-		struct replace_placeholder<types<T...>, types<>, types<R...>>
-			{ using type = types<R..., T...>; };
+		struct replace_placeholder<packeR<T...>, packeR<>, packeR<R...>>
+			{ using type = packeR<R..., T...>; };
 		//-----------------------------------------------
 		template <template <typename...> class, typename>	struct m_pack;
 		template <template <typename...> class M, typename...V>
-		struct m_pack<M, types<V...>>
+		struct m_pack<M, packeR<V...>>
 			{ using type = M<V...>; };
 		//-----------------------------------------------
 		template <typename left, typename right>
@@ -114,16 +114,28 @@ namespace mymd  {
 				static constexpr bool value = left::template apply<V...>::value && right::template apply<V...>::value;
 			};
 		};
+		//------------
+		template <typename T>
+		struct mbind_not	{
+			static const std::size_t count_placeholder = T::count_placeholder;
+			template <typename... V>
+			struct apply	{
+				static constexpr bool value = !T::template apply<V...>::value;
+			};
+		};
 
 	}	//detail_mbind
 
 	using detail_mbind::_X_;
 	using _x_ = detail_mbind::_X_<detail_mbind::no_cnv>;
+    using _xrr_ = detail_mbind::_X_<std::remove_reference>;
+    using _xrcv_ = detail_mbind::_X_<std::remove_cv>;
+    using _xrcvr_ = detail_mbind::_X_<std::remove_cv, std::remove_reference>;
 
 	template <template <typename...> class M, typename... binder>
 	class mbind	{
 		template <typename... V>
-			using S = typename detail_mbind::replace_placeholder<detail_mbind::types<binder...>, detail_mbind::types<V...>>::type;
+			using S = typename detail_mbind::replace_placeholder<detail_mbind::packeR<binder...>, detail_mbind::packeR<V...>>::type;
 	public:
 		static const std::size_t count_placeholder = detail_mbind::count_placeholder<binder...>::value;
 		template <typename... V>
@@ -132,17 +144,19 @@ namespace mymd  {
 			using bind = mbind<M, binder..., B...>;
 		template <typename... B>
 			using rebind = mbind<M, B...>;
+		template <template <typename...> class M2>
+			using change = mbind<M2, binder...>;
 	};
 	//-------------------------------------------------
 	namespace detail_mbind  {
-		template <typename T, typename = types<>, std::size_t C = T::count_placeholder>
+		template <typename T, typename = packeR<>, std::size_t C = T::count_placeholder>
 			struct _x_supply;
 		template <typename T, typename... R, std::size_t C>
-		struct _x_supply<T, types<R...>, C>	{
-			using type = typename _x_supply<T, types<_x_, R...>, C - 1>::type;
+		struct _x_supply<T, packeR<R...>, C>	{
+			using type = typename _x_supply<T, packeR<_x_, R...>, C - 1>::type;
 		};
 		template <typename T, typename... R>
-		struct _x_supply<T, types<R...>, 0>	{
+		struct _x_supply<T, packeR<R...>, 0>	{
 			using type = mbind<T::template apply, R...>;
 		};
 	}	//detail_mbind
@@ -159,6 +173,13 @@ namespace mymd  {
 		-> typename detail_mbind::_x_supply<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type
 	{
 		return typename detail_mbind::_x_supply<typename detail_mbind::mbind_and<mbind<M1, B1...>, mbind<M2, B2...>>>::type{};
+	}
+
+	template <template <typename...> class M, typename... B>
+	auto operator ! (const mbind<M, B...>&)
+		-> typename detail_mbind::_x_supply<typename detail_mbind::mbind_not<mbind<M, B...>>>::type
+	{
+		return typename detail_mbind::_x_supply<typename detail_mbind::mbind_not<mbind<M, B...>>>::type{};
 	}
 
 }
