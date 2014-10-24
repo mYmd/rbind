@@ -16,19 +16,19 @@ template <typename T>
 
 struct Plus {
     template <typename T>
-        auto operator()(T a, T b) const
+        auto operator()(T a, T b) const ->decltype(a+b)
         { return a + b; }
     template <typename T>
-        auto operator()(T* a, T* b) const
+        auto operator()(T* a, T* b) const ->decltype(*a+*b)
         { return *a + *b; }
 };
 
 struct Minus {
     template <typename T>
-        auto operator()(T a, T b) const
+        auto operator()(T a, T b) const ->decltype(a-b)
         { return a - b; }
     template <typename T>
-        auto operator()(T* a, T* b) const
+        auto operator()(T* a, T* b) const ->decltype(*a-*b)
         { return *a - *b; }
 };
 
