@@ -15,8 +15,11 @@ namespace mymd  {
 			struct no_cnv  { using type = T; };
         //-----------------------------------------------
 		//  placeholder
-		template <template <typename> class...>
-			struct _X_ { };
+		template <template <typename> class...convert>
+			struct _X_ {
+				template <template <typename> class...a>
+				using append = _X_<convert..., a...>;
+			};
 		//-----------------------------------------------
 		template <typename>
 		struct voiD_t  { using type = void; };
