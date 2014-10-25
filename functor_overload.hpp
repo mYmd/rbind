@@ -19,8 +19,7 @@ namespace mymd {
 		template <template <typename> class C = noCondition, bool B = true>
 		struct cond	{ };
 		//-----------------------------------------------------
-		template <typename...>
-		struct types  { };
+		template <typename...> struct packeR { };
 		//-----------------------------------------------------
 		template <typename T, typename>
 		struct arg  {
@@ -44,16 +43,16 @@ namespace mymd {
 		class bolt  {
 			F fn;
 			template <typename T, typename U>
-			using apply = typename arg<T, U>::apply;	//workaround for VC
+			using apply = typename arg<T, U>::apply::type;	//workaround for VC
 		protected:
 			template <typename... V>
-			auto invoke(types<V...>, typename arg<A, V>::applyr::type... a) const
-				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
-				{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
+			auto invoke(packeR<V...>, typename arg<A, V>::applyr::type... a) const
+				->decltype(fn(std::declval<apply<A, V>>()...))
+				{  return fn(std::forward<apply<A, V>>(a) ...);  }
 			template <typename... V>
-			auto invoke(types<V...>, typename arg<A, V>::applyr::type... a)
-				->decltype(fn(std::declval<typename apply<A, V>::type>()...))
-				{  return fn(std::forward<typename apply<A, V>::type>(a) ...);  }
+			auto invoke(packeR<V...>, typename arg<A, V>::applyr::type... a)
+				->decltype(fn(std::declval<apply<A, V>>()...))
+				{  return fn(std::forward<apply<A, V>>(a) ...);  }
 		public:
 			constexpr bolt(const F& f) : fn(f)  {  }
 		};
@@ -64,11 +63,11 @@ namespace mymd {
 		public:
 			constexpr bolts(const T1& t1, const T2& t2) : T1(t1), T2(t2) { }
 			template <typename... V>
-			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
-				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+			auto operator()(V&&... v) const->decltype(invoke(packeR<V...>{}, std::declval<V>()...))
+				{  return invoke(packeR<V...>{}, std::forward<V>(v)...);  }
 			template <typename... V>
-			auto operator()(V&&... v) ->decltype(invoke(types<V...>{}, std::declval<V>()...))
-				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+			auto operator()(V&&... v) ->decltype(invoke(packeR<V...>{}, std::declval<V>()...))
+				{  return invoke(packeR<V...>{}, std::forward<V>(v)...);  }
 		};
 
 		template <typename F, typename... A>
@@ -77,11 +76,11 @@ namespace mymd {
 		public:
 			constexpr bolts(const F& t) : bolt<F, A...>(t) { }
 			template <typename... V>
-			auto operator()(V&&... v) const->decltype(invoke(types<V...>{}, std::declval<V>()...))
-				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+			auto operator()(V&&... v) const->decltype(invoke(packeR<V...>{}, std::declval<V>()...))
+				{  return invoke(packeR<V...>{}, std::forward<V>(v)...);  }
 			template <typename... V>
-			auto operator()(V&&... v) ->decltype(invoke(types<V...>{}, std::declval<V>()...))
-				{  return invoke(types<V...>{}, std::forward<V>(v)...);  }
+			auto operator()(V&&... v) ->decltype(invoke(packeR<V...>{}, std::declval<V>()...))
+				{  return invoke(packeR<V...>{}, std::forward<V>(v)...);  }
 		};
 
 		template <typename T1, typename T2, typename U1, typename U2>
@@ -114,3 +113,18 @@ namespace mymd {
 }	//namespace mymd
 
 #endif
+
+/*
+#if defined MMYYMMDD_MBIND_INCLUDED
+namespace mymd {
+	namespace detail_fol	{		
+		template <template <typename...> class M, typename... binder, typename V>
+		struct arg<mymd::mbind<M, binder...>, V>  {
+			using mb = typename mymd::mbind<M, binder...>::template apply<V>;
+			using apply  = std::enable_if<mb::value, V>;
+			using applyr = std::enable_if<mb::value, V&&>;
+		};
+	}
+}
+#endif
+*/
