@@ -132,9 +132,10 @@ namespace mymd  {
 
 	using detail_mbind::_X_;
 	using _x_ = detail_mbind::_X_<detail_mbind::no_cnv>;
-    using _xrr_ = detail_mbind::_X_<std::remove_reference>;
-    using _xrcv_ = detail_mbind::_X_<std::remove_cv>;
-    using _xrcvr_ = detail_mbind::_X_<std::remove_cv, std::remove_reference>;
+	using _xrr_ = detail_mbind::_X_<std::remove_reference>;
+	using _xrcv_ = detail_mbind::_X_<std::remove_cv>;
+	using _xrcvr_ = detail_mbind::_X_<std::remove_cv, std::remove_reference>;
+	using _xdecay_ = detail_mbind::_X_<std::decay>;
 
 	template <template <typename...> class M, typename... binder>
 	class mbind	{
