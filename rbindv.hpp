@@ -576,10 +576,12 @@ namespace detail_bind   {
             constexpr detail_bind::simple_placeholder<13> _13th;
             constexpr detail_bind::simple_placeholder<14> _14th;
             constexpr detail_bind::simple_placeholder<15> _15th;
-            //   ...
-            constexpr detail_bind::simple_placeholder<INT_MAX> _oo;
+            //constexpr detail_bind::simple_placeholder<INT_MAX> _oo;
         }
-
+        // copy any parameter
+        template <typename T> T&& _val(T&& x)      { return std::forward<T>(x); }
+        template <typename T> T   _val(T& x)       { return x; }
+        template <typename T> T   _val(const T& x) { return x; }
         // Alias for placeholder
         template <int N>
         using plhdr_t = detail_bind::simple_placeholder<N>;
