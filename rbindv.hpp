@@ -25,40 +25,25 @@ namespace detail_bind   {
 
     template <std::size_t first, std::size_t last>
     using indEx_range = typename indEx_range_imple<first, last>::type;
-    //---------------------------------------------------------------------
-    template <bool...b> struct bool_arr{};
-    template <bool, typename A>  struct type_pair {};
-    template <typename A> A upcast(type_pair<true, A>&);
-    //a little complicated because of VC++
-    template <template <typename> class Pr>
-    class find_unique     {
-        template <typename... elem>
-        struct apply0   {
-            using b_array = bool_arr<Pr<elem>::value...>;
-            template <typename, typename...>    struct D;
-            template <bool...b, typename...T>
-                struct D<bool_arr<b...>, T...> : type_pair<b, T>... {};
-            static D<b_array, elem...>& getD();
-                using type = decltype(upcast( getD() ));
-        };
-        template <typename Arr> struct Apply0;
-        template <template <typename...> class Arr, typename... elem>
-        struct Apply0<Arr<elem...>>  { using type = typename apply0<elem...>::type; };
-    public:
-        template <typename... elem> using apply = typename apply0<elem...>::type;
-        template <typename Arr>     using Apply = typename Apply0<Arr>::type;
-    };
+
+    /* when std::make_index_sequence can be used
+    template <std::size_t... indices>
+    using indEx_sequence = std::index_sequence<indices...>;
+
+    template <std::size_t, typename, int> struct indEx_range_imple;
+
+    template <std::size_t first, std::size_t...seq, int sig>
+    struct indEx_range_imple<first, std::index_sequence<seq...>, sig>
+        { using type = std::index_sequence<first + sig*seq...>; };
+
+    template <std::size_t first, std::size_t last, int sig = (first<=last)?1:-1>
+    using indEx_range = typename indEx_range_imple<first, std::make_index_sequence<sig*(last-first)>, sig>::type;
+    */
     //+*******************************************************************************************
     // remove_rvalue_reference
-    template<class T>
-    struct remOve_rvaluE_reference  {   using type = T; };
-
-    template<class T>
-    struct remOve_rvaluE_reference<T&&> {   using type = T; };
-
-    template<class T>
-    using remOve_rvaluE_reference_t = typename remOve_rvaluE_reference<T>::type;
-
+    template<class T> struct remove_rvaluE_reference       { using type = T; };
+    template<class T> struct remove_rvaluE_reference<T&&>  { using type = T; };
+    template<class T> using  remove_rvaluE_reference_t = typename remove_rvaluE_reference<T>::type;
     //==================================================================
     //parameter buffer    パラメータバッファ
     template <typename T>
@@ -106,7 +91,8 @@ namespace detail_bind   {
         // パラメータをコピー渡しにする     parameter by copy
         auto operator =(const placeholder_with_V<N, void>&) const->placeholder_with_V<N, by_copy>
             { return placeholder_with_V<N, by_copy>(); }
-        //assign the default parameter (captured by reference)   デフォルト値を = で設定する（参照キャプチャ）
+        // assign the default parameter (captured by reference)
+        // デフォルト値を = で設定する（参照キャプチャ）
         template <typename V>
         auto operator =(V&& v) const -> placeholder_with_V<N, V>
             { return placeholder_with_V<N, V>(std::forward<V>(v)); }
@@ -163,7 +149,7 @@ namespace detail_bind   {
             using type = V;
             static V&& get(placeholder_with_V<N, condition_trait_1<Tr>> const& , V&& v)
             {
-                static_assert(Tr<remOve_rvaluE_reference_t<V>>::value, "rbind:parameter type is rejected");
+                static_assert(Tr<remove_rvaluE_reference_t<V>>::value, "rbind:parameter type is rejected");
                 return std::forward<V>(v);
             }
         };
@@ -177,7 +163,7 @@ namespace detail_bind   {
             using type = V;
             static V&& get(placeholder_with_V<N, condition_trait_2<Tr>> const& , V&& v)
             {
-                static_assert(Tr::template apply<remOve_rvaluE_reference_t<V>>::value, "rbind:parameter type is rejected");
+                static_assert(Tr::template apply<remove_rvaluE_reference_t<V>>::value, "rbind:parameter type is rejected");
                 return std::forward<V>(v);
             }
         };
@@ -204,8 +190,6 @@ namespace detail_bind   {
             { return v; }
         };
     };
-    
-
 
     //************************************************************************************************
     //type of invoke    呼び出しの型
@@ -543,10 +527,10 @@ namespace detail_bind   {
     { return std::tuple_cat(granulate(std::forward<T>(t))...); }
     //-------------------------------------------------
     template <typename... Vars>
-    auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<remOve_rvaluE_reference_t<Vars>...>
+    auto rbind_imple(std::tuple<Vars...>&& vars)->BindOf<remove_rvaluE_reference_t<Vars>...>
     {
         using index = indEx_range<0, sizeof...(Vars)>;
-        return BindOf<remOve_rvaluE_reference_t<Vars>...>(std::forward<std::tuple<Vars...>>(vars), index());
+        return BindOf<remove_rvaluE_reference_t<Vars>...>(std::forward<std::tuple<Vars...>>(vars), index());
     }
     //-------------------------------------------------
     template <typename T>
