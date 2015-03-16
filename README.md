@@ -1,5 +1,8 @@
 rbind
 =====
+2015/03/16  
+clangでもgccでもVCでもコンパイルできていたのに、突然エラーが出るようになった。  
+rbind以外のソースコードをmiscellaneouに移動し、こちらは無期限停止とする。  
 
 rbind is alternative of std::bind that is reference base.  
 It has additional function using special placeholders.
