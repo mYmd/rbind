@@ -26,7 +26,7 @@ namespace detail_bind   {
     template <int first, int last>
     using int_Range = typename int_Range_imple<first, last>::type;  //*/
 
-    /* C++14
+    /*C++14
     template <std::size_t... indices>
     using int_Sequence = std::integer_sequence<int, indices...>;
 
