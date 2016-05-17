@@ -120,7 +120,7 @@ namespace detail_bind   {
         template <typename V>
         struct eval     {
             using type = V;
-            static V&& get(T& , V&& v)  { return std::forward<V>(v); }
+            static V&& get(T const& , V&& v)  { return std::forward<V>(v); }
         };
     };
 
